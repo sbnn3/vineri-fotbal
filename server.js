@@ -382,6 +382,17 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, matchView(data, match, token));
     }
 
+    // ---- API ADMIN: reseteaza lista de participanti a meciului curent (necesita cheie) ----
+    if (pathname === '/api/admin/reset' && req.method === 'POST') {
+      const body = await readBody(req);
+      if (body.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
+      const data = getData();
+      const match = await getOrCreateCurrentMatch(data);
+      data.rsvps = data.rsvps.filter((r) => r.matchId !== match.id);
+      await persist(data);
+      return sendJSON(res, 200, matchView(data, match, null));
+    }
+
     // ---- API ADMIN: vezi/editeaza meciul curent (necesita cheie) ----
     if (pathname === '/api/admin/match' && req.method === 'GET') {
       if (parsed.query.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });

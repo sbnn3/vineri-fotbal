@@ -12,6 +12,7 @@
   label{ display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
   input, select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid #e3e8e5; font-size:15px; }
   button{ font-size:15px; font-weight:700; border:none; border-radius:10px; padding:12px 16px; margin-top:16px; width:100%; background:#1f8a4c; color:#fff; cursor:pointer; }
+  button.danger{ background:#c53030; }
   .muted{ color:#6b7770; font-size:13px; }
   .msg{ margin-top:12px; font-size:14px; }
   ul{ padding-left:18px; }
@@ -48,6 +49,13 @@
     <button id="save">Salvează</button>
     <div class="msg" id="msg"></div>
   </div>
+
+  <div class="card" id="reset-card" style="display:none;">
+    <h2>⚠️ Resetează lista</h2>
+    <p class="muted">Șterge toți participanții și lista de rezervă a meciului curent (jucătorii înregistrați rămân, doar prezența pentru săptămâna asta se golește). Util înainte să anunți în grup, ca toată lumea să pornească de la 0.</p>
+    <button id="reset" class="danger">Resetează lista pentru meciul curent</button>
+    <div class="msg" id="reset-msg"></div>
+  </div>
 </div>
 <script>
   const el = (id) => document.getElementById(id);
@@ -59,6 +67,7 @@
     const data = await res.json();
     if (!res.ok) { el('msg').textContent = data.error || 'Eroare'; return; }
     el('edit-card').style.display = 'block';
+    el('reset-card').style.display = 'block';
     el('m-date').textContent = data.match.date;
     el('m-summary').textContent = `${data.confirmedCount}/${data.match.capacity} confirmați, ${data.waitlist.length} pe rezervă`;
     el('capacity').value = data.match.capacity;
@@ -89,8 +98,21 @@
     if (res.ok) load();
   }
 
+  async function resetList(){
+    if (!confirm('Sigur ștergi toți participanții din lista meciului curent? Nu poate fi anulat.')) return;
+    const res = await fetch('/api/admin/reset', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({key: currentKey}),
+    });
+    const data = await res.json();
+    el('reset-msg').textContent = res.ok ? 'Lista a fost resetată ✅' : (data.error || 'Eroare');
+    if (res.ok) load();
+  }
+
   el('load').addEventListener('click', load);
   el('save').addEventListener('click', save);
+  el('reset').addEventListener('click', resetList);
 </script>
 </body>
 </html>
