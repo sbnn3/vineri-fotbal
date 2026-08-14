@@ -1,5 +1,11 @@
 // Vineri Fotbal — server minimal, fara dependinte externe (doar Node.js standard).
 // Ruleaza cu: node server.js
+//
+// Persistenta: daca UPSTASH_REDIS_REST_URL si UPSTASH_REDIS_REST_TOKEN sunt setate
+// (vezi README), toate datele sunt sincronizate cu Upstash Redis (gratuit, persistent
+// cu adevarat). Fara ele, aplicatia foloseste doar fisierul local data.json — suficient
+// pentru dezvoltare locala, dar pe Render (plan gratuit) fisierele locale se pierd la
+// fiecare repornire, deci Upstash e recomandat pentru productie.
 
 const http = require('http');
 const fs = require('fs');
@@ -10,6 +16,11 @@ const url = require('url');
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const ADMIN_KEY = process.env.ADMIN_KEY || 'schimba-ma-te-rog';
+
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const UPSTASH_KEY = 'vineri-fotbal-data';
+const upstashEnabled = Boolean(UPSTASH_URL && UPSTASH_TOKEN);
 
 // Doar aceste fisiere sunt servite public (nu expunem server.js, package.json, data.json etc.)
 const STATIC_FILES = {
@@ -23,28 +34,81 @@ const DEFAULT_CONFIG = {
   location: "O'Hanlon Park, Celbridge",
   time: '19:00',
   defaultCapacity: 15,
+  price: 5,
+  revtag: 'sbnn3',
 };
 
-// ---------- Persistenta (fisier JSON, simplu si suficient pentru un grup mic) ----------
+// ---------- Persistenta ----------
 
-function loadData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    const initial = { players: [], matches: [], rsvps: [], config: DEFAULT_CONFIG };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2));
-    return initial;
-  }
-  const raw = fs.readFileSync(DATA_FILE, 'utf8');
-  try {
-    const data = JSON.parse(raw);
-    if (!data.config) data.config = DEFAULT_CONFIG;
-    return data;
-  } catch (e) {
-    throw new Error('data.json este corupt: ' + e.message);
-  }
+let cachedData = null;
+
+function ensureConfig(data) {
+  data.config = Object.assign({}, DEFAULT_CONFIG, data.config || {});
 }
 
-function saveData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+async function upstashGet() {
+  const res = await fetch(`${UPSTASH_URL}/get/${UPSTASH_KEY}`, {
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+  });
+  if (!res.ok) throw new Error('Upstash GET a esuat: ' + res.status);
+  const json = await res.json();
+  return json.result || null;
+}
+
+async function upstashSet(value) {
+  const res = await fetch(`${UPSTASH_URL}/set/${UPSTASH_KEY}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+    body: value,
+  });
+  if (!res.ok) throw new Error('Upstash SET a esuat: ' + res.status);
+}
+
+async function initData() {
+  if (upstashEnabled) {
+    try {
+      const raw = await upstashGet();
+      if (raw) {
+        cachedData = JSON.parse(raw);
+        ensureConfig(cachedData);
+        console.log('Date incarcate din Upstash Redis.');
+        return;
+      }
+      console.log('Upstash gol inca — pornim cu date noi.');
+    } catch (e) {
+      console.error('Nu am putut incarca din Upstash, incerc fisierul local:', e.message);
+    }
+  }
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      cachedData = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+      ensureConfig(cachedData);
+      return;
+    } catch (e) {
+      console.error('data.json local corupt, pornim cu date noi:', e.message);
+    }
+  }
+  cachedData = { players: [], matches: [], rsvps: [], config: Object.assign({}, DEFAULT_CONFIG) };
+}
+
+function getData() {
+  return cachedData;
+}
+
+async function persist(data) {
+  cachedData = data;
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data));
+  } catch (e) {
+    console.error('Salvare locala esuata (normal pe Render fara disc):', e.message);
+  }
+  if (upstashEnabled) {
+    try {
+      await upstashSet(JSON.stringify(data));
+    } catch (e) {
+      console.error('Salvare in Upstash esuata:', e.message);
+    }
+  }
 }
 
 // ---------- Utilitare dată (calculează "vinerea curentă" in fusul orar Europe/Dublin) ----------
@@ -72,7 +136,7 @@ function normalizePhone(phone) {
 
 // ---------- Logica de business ----------
 
-function getOrCreateCurrentMatch(data) {
+async function getOrCreateCurrentMatch(data) {
   const date = nextFridayISO();
   let match = data.matches.find((m) => m.date === date);
   if (!match) {
@@ -82,12 +146,17 @@ function getOrCreateCurrentMatch(data) {
       time: data.config.time,
       location: data.config.location,
       capacity: data.config.defaultCapacity,
+      price: data.config.price,
+      revtag: data.config.revtag,
       status: 'open', // open | cancelled
       createdAt: new Date().toISOString(),
     };
     data.matches.push(match);
-    saveData(data);
+    await persist(data);
   }
+  // meciuri create inainte de a exista pret/revtag: completeaza cu valorile curente din config
+  if (match.price === undefined) match.price = data.config.price;
+  if (match.revtag === undefined) match.revtag = data.config.revtag;
   return match;
 }
 
@@ -115,6 +184,8 @@ function matchView(data, match, token) {
       time: match.time,
       location: match.location,
       capacity: match.capacity,
+      price: match.price,
+      revtag: match.revtag,
       status: match.status,
     },
     myStatus,
@@ -195,7 +266,7 @@ const server = http.createServer(async (req, res) => {
       const phone = String(body.phone || '').trim();
       if (!name || !phone) return sendJSON(res, 400, { error: 'Numele si telefonul sunt obligatorii.' });
 
-      const data = loadData();
+      const data = getData();
       let player = findPlayerByPhone(data, phone);
       if (player) {
         player.name = name; // permite actualizarea numelui daca s-a schimbat
@@ -203,14 +274,14 @@ const server = http.createServer(async (req, res) => {
         player = { id: crypto.randomUUID(), name, phone, createdAt: new Date().toISOString() };
         data.players.push(player);
       }
-      saveData(data);
+      await persist(data);
       return sendJSON(res, 200, { token: player.id, name: player.name });
     }
 
     // ---- API: info despre jucator (dupa token) ----
     if (pathname === '/api/me' && req.method === 'GET') {
       const token = parsed.query.token;
-      const data = loadData();
+      const data = getData();
       const player = data.players.find((p) => p.id === token);
       if (!player) return sendJSON(res, 404, { error: 'Jucator negasit' });
       return sendJSON(res, 200, { token: player.id, name: player.name });
@@ -219,8 +290,8 @@ const server = http.createServer(async (req, res) => {
     // ---- API: meciul curent (vinerea urmatoare) ----
     if (pathname === '/api/match/current' && req.method === 'GET') {
       const token = parsed.query.token || null;
-      const data = loadData();
-      const match = getOrCreateCurrentMatch(data);
+      const data = getData();
+      const match = await getOrCreateCurrentMatch(data);
       return sendJSON(res, 200, matchView(data, match, token));
     }
 
@@ -232,11 +303,11 @@ const server = http.createServer(async (req, res) => {
       if (!token || !['join', 'leave'].includes(action)) {
         return sendJSON(res, 400, { error: 'Cerere invalida.' });
       }
-      const data = loadData();
+      const data = getData();
       const player = data.players.find((p) => p.id === token);
       if (!player) return sendJSON(res, 404, { error: 'Jucator negasit. Inregistreaza-te din nou.' });
 
-      const match = getOrCreateCurrentMatch(data);
+      const match = await getOrCreateCurrentMatch(data);
       if (match.status === 'cancelled') {
         return sendJSON(res, 409, { error: 'Meciul de vinerea aceasta a fost anulat.' });
       }
@@ -278,28 +349,29 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      saveData(data);
+      await persist(data);
       return sendJSON(res, 200, matchView(data, match, token));
     }
 
     // ---- API ADMIN: vezi/editeaza meciul curent (necesita cheie) ----
     if (pathname === '/api/admin/match' && req.method === 'GET') {
       if (parsed.query.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
-      const data = loadData();
-      const match = getOrCreateCurrentMatch(data);
+      const data = getData();
+      const match = await getOrCreateCurrentMatch(data);
       return sendJSON(res, 200, matchView(data, match, null));
     }
 
     if (pathname === '/api/admin/match' && req.method === 'POST') {
       const body = await readBody(req);
       if (body.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
-      const data = loadData();
-      const match = getOrCreateCurrentMatch(data);
+      const data = getData();
+      const match = await getOrCreateCurrentMatch(data);
       if (body.capacity !== undefined) match.capacity = Math.max(0, parseInt(body.capacity, 10) || 0);
       if (body.time) match.time = String(body.time);
       if (body.location) match.location = String(body.location);
+      if (body.price !== undefined) match.price = Math.max(0, Number(body.price) || 0);
+      if (body.revtag) match.revtag = String(body.revtag).trim().replace(/^@/, '');
       if (body.status && ['open', 'cancelled'].includes(body.status)) match.status = body.status;
-      saveData(data);
 
       // promoveaza din lista de rezerva daca s-a marit capacitatea
       const confirmedCount = data.rsvps.filter((r) => r.matchId === match.id && r.status === 'confirmed').length;
@@ -313,9 +385,9 @@ const server = http.createServer(async (req, res) => {
           r.status = 'confirmed';
           freeSpots--;
         }
-        saveData(data);
       }
 
+      await persist(data);
       return sendJSON(res, 200, matchView(data, match, null));
     }
 
@@ -332,7 +404,10 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Vineri Fotbal ruleaza pe portul ${PORT}`);
-  console.log(`Deschide http://localhost:${PORT}`);
+initData().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Vineri Fotbal ruleaza pe portul ${PORT}`);
+    console.log(`Deschide http://localhost:${PORT}`);
+    console.log(upstashEnabled ? 'Persistenta: Upstash Redis (activa).' : 'Persistenta: doar fisier local (Upstash NEactiv — vezi README).');
+  });
 });

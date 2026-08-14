@@ -2,224 +2,550 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Fotbal Vineri — O'Hanlon Park</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Vineri - Seară de Fotbal ⚽</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --green:#1f8a4c;
-    --green-dark:#166a3a;
-    --bg:#f4f6f5;
-    --card:#ffffff;
-    --text:#1c2620;
-    --muted:#6b7770;
-    --border:#e3e8e5;
-    --red:#c0392b;
-    --amber:#b7791f;
+    --pitch-0:#04150d;
+    --pitch-1:#0a2b1a;
+    --pitch-2:#0e3a22;
+    --grass:#22c55e;
+    --grass-2:#16a34a;
+    --grass-glow: rgba(34,197,94,0.45);
+    --gold:#f4c430;
+    --white:#f5f8f6;
+    --muted:#93ab9f;
+    --card:rgba(15,35,24,0.72);
+    --card-border:rgba(255,255,255,0.08);
+    --line:rgba(255,255,255,0.09);
+    --red:#f0473f;
+    --amber:#f2a93b;
   }
   *{box-sizing:border-box;}
-  body{
+  html,body{
     margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg);
-    color:var(--text);
+    min-height:100%;
+  }
+  body{
+    font-family:'Rajdhani',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color:var(--white);
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(244,196,48,0.10), transparent 60%),
+      radial-gradient(ellipse 900px 600px at 85% 0%, rgba(34,197,94,0.22), transparent 55%),
+      radial-gradient(ellipse 1200px 800px at 50% 120%, rgba(22,163,74,0.18), transparent 60%),
+      repeating-linear-gradient(115deg, var(--pitch-1) 0px, var(--pitch-1) 90px, var(--pitch-2) 90px, var(--pitch-2) 180px),
+      var(--pitch-0);
     min-height:100vh;
+    padding-bottom: env(safe-area-inset-bottom);
   }
   .wrap{
     max-width:480px;
     margin:0 auto;
-    padding:20px 16px 60px;
+    padding:26px 16px 60px;
+    position:relative;
   }
   header.top{
     text-align:center;
-    padding:18px 0 8px;
+    padding:10px 0 22px;
   }
+  .badge-line{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.22em;
+    color:var(--gold);
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .badge-line::before, .badge-line::after{
+    content:"";
+    height:1px;
+    width:22px;
+    background:linear-gradient(90deg, transparent, rgba(244,196,48,0.7));
+  }
+  .badge-line::after{ transform: scaleX(-1); }
   header.top h1{
-    font-size:22px;
-    margin:0 0 2px;
+    font-family:'Bebas Neue',sans-serif;
+    font-weight:400;
+    font-size:clamp(30px, 9vw, 44px);
+    letter-spacing:.04em;
+    margin:0;
+    line-height:1.05;
+    background:linear-gradient(180deg, #ffffff 10%, #cdeedb 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 34px var(--grass-glow);
   }
   header.top p{
-    margin:0;
+    margin:6px 0 0;
     color:var(--muted);
-    font-size:14px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
   }
+
   .card{
     background:var(--card);
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:20px;
-    margin-top:16px;
-    box-shadow:0 1px 3px rgba(20,30,25,0.04);
+    border:1px solid var(--card-border);
+    border-radius:20px;
+    padding:22px;
+    margin-top:18px;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 20px 50px -20px rgba(0,0,0,0.6);
+    position:relative;
+    overflow:hidden;
+    animation: rise .5s ease both;
   }
-  .card h2{
-    margin:0 0 4px;
-    font-size:19px;
+  .card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    padding:1px;
+    border-radius:20px;
+    background:linear-gradient(135deg, rgba(34,197,94,0.5), transparent 40%, transparent 70%, rgba(244,196,48,0.25));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events:none;
   }
-  .meta{
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(14px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  /* ---- Match hero card ---- */
+  .kickoff-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .day-pill{
+    display:inline-block;
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--pitch-0);
+    background:linear-gradient(135deg, var(--grass), var(--grass-2));
+    padding:5px 12px;
+    border-radius:999px;
+    box-shadow:0 6px 18px -6px var(--grass-glow);
+  }
+  .match-date{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:52px;
+    line-height:.95;
+    letter-spacing:.03em;
+    margin:10px 0 2px;
+    color:#fff;
+  }
+  .match-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-top:6px;
     color:var(--muted);
-    font-size:14px;
-    margin:2px 0;
+    font-weight:600;
+    font-size:14.5px;
   }
+  .match-meta span{ display:inline-flex; align-items:center; gap:6px; }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:7px 14px;
+    border-radius:999px;
+    font-size:13.5px;
+    font-weight:700;
+    margin-top:16px;
+    letter-spacing:.02em;
+  }
+  .status-confirmed{ background:rgba(34,197,94,0.16); color:#5eeba3; border:1px solid rgba(34,197,94,0.35); box-shadow:0 0 22px -8px var(--grass-glow); }
+  .status-waitlist{ background:rgba(242,169,59,0.14); color:var(--amber); border:1px solid rgba(242,169,59,0.35); }
+  .status-none{ background:rgba(255,255,255,0.06); color:var(--muted); border:1px solid var(--card-border); }
+
+  /* ---- Capacity meter: 15 stadium-seat ticks ---- */
+  .capacity-wrap{ margin-top:20px; }
+  .capacity-label{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-weight:700;
+    font-size:13px;
+    color:var(--muted);
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .capacity-label b{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:22px;
+    color:#fff;
+    letter-spacing:.02em;
+  }
+  .ticks{
+    display:grid;
+    grid-template-columns:repeat(15, 1fr);
+    gap:4px;
+  }
+  .tick{
+    height:10px;
+    border-radius:3px;
+    background:rgba(255,255,255,0.08);
+    transition:background .25s ease, box-shadow .25s ease;
+  }
+  .tick.filled{
+    background:linear-gradient(180deg, var(--grass), var(--grass-2));
+    box-shadow:0 0 10px -1px var(--grass-glow);
+  }
+  .tick.waiting{
+    background:linear-gradient(180deg, var(--amber), #c9852a);
+  }
+
+  /* ---- Buttons ---- */
+  button{
+    font-family:'Rajdhani',sans-serif;
+    font-size:18px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    border:none;
+    border-radius:14px;
+    padding:16px 18px;
+    cursor:pointer;
+    width:100%;
+    margin-top:18px;
+    transition:transform .12s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  button:active{ transform:scale(0.97); }
+  .btn-primary{
+    background:linear-gradient(135deg, var(--grass) 0%, var(--grass-2) 100%);
+    color:#04150d;
+    box-shadow:0 14px 30px -12px var(--grass-glow), inset 0 1px 0 rgba(255,255,255,0.3);
+    animation: pulse-glow 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse-glow{
+    0%,100%{ box-shadow:0 14px 30px -12px var(--grass-glow), inset 0 1px 0 rgba(255,255,255,0.3); }
+    50%{ box-shadow:0 14px 40px -8px var(--grass-glow), inset 0 1px 0 rgba(255,255,255,0.3); }
+  }
+  .btn-leave{
+    background:rgba(240,71,63,0.12);
+    color:#ff8a83;
+    border:1px solid rgba(240,71,63,0.35);
+  }
+  .btn-secondary{
+    background:rgba(255,255,255,0.06);
+    color:var(--white);
+    border:1px solid var(--card-border);
+    font-size:14px;
+    padding:12px;
+  }
+
+  /* ---- Register form ---- */
   label{
     display:block;
     font-size:13px;
-    font-weight:600;
-    margin:14px 0 6px;
-    color:var(--text);
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin:16px 0 7px;
+    color:var(--muted);
   }
   input[type=text], input[type=tel]{
     width:100%;
-    padding:12px 14px;
-    border-radius:10px;
-    border:1px solid var(--border);
-    font-size:16px;
-    background:#fbfcfb;
-  }
-  input:focus{ outline:2px solid var(--green); border-color:var(--green); }
-  button{
-    font-size:16px;
-    font-weight:700;
-    border:none;
+    padding:14px 16px;
     border-radius:12px;
-    padding:14px 18px;
-    cursor:pointer;
-    width:100%;
-    margin-top:16px;
+    border:1px solid var(--card-border);
+    font-size:16px;
+    font-family:'Rajdhani',sans-serif;
+    font-weight:600;
+    background:rgba(255,255,255,0.05);
+    color:#fff;
   }
-  .btn-primary{ background:var(--green); color:#fff; }
-  .btn-primary:active{ background:var(--green-dark); }
-  .btn-leave{ background:#fdecea; color:var(--red); }
-  .btn-secondary{ background:#eef1ef; color:var(--text); }
-  .status-pill{
-    display:inline-block;
-    padding:5px 12px;
-    border-radius:999px;
-    font-size:13px;
-    font-weight:700;
-    margin-top:10px;
-  }
-  .status-confirmed{ background:#e5f6ec; color:var(--green-dark); }
-  .status-waitlist{ background:#fdf3e0; color:var(--amber); }
-  .status-none{ background:#eef1ef; color:var(--muted); }
-  .progress{
-    height:8px;
-    background:#eef1ef;
-    border-radius:999px;
-    overflow:hidden;
-    margin-top:12px;
-  }
-  .progress > div{
-    height:100%;
-    background:var(--green);
-  }
-  ol.players{
-    list-style:none;
-    margin:10px 0 0;
-    padding:0;
-  }
-  ol.players li{
-    display:flex;
-    gap:10px;
-    padding:8px 0;
-    border-bottom:1px solid var(--border);
-    font-size:15px;
-  }
-  ol.players li:last-child{ border-bottom:none; }
-  ol.players li .num{
-    color:var(--muted);
-    width:22px;
-    flex-shrink:0;
-  }
-  .section-title{
-    font-size:14px;
-    font-weight:700;
-    margin:22px 0 2px;
-    color:var(--text);
-  }
-  .empty{
-    color:var(--muted);
-    font-size:14px;
-    padding:8px 0;
-  }
-  .me-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-top:14px;
-    font-size:13px;
-    color:var(--muted);
-  }
-  .me-row a{ color:var(--muted); }
+  input::placeholder{ color:#5c7268; }
+  input:focus{ outline:none; border-color:var(--grass); box-shadow:0 0 0 3px rgba(34,197,94,0.22); }
+
   .error-box{
-    background:#fdecea;
-    color:var(--red);
-    padding:10px 14px;
-    border-radius:10px;
+    background:rgba(240,71,63,0.12);
+    color:#ff8a83;
+    border:1px solid rgba(240,71,63,0.3);
+    padding:11px 14px;
+    border-radius:12px;
     font-size:14px;
+    font-weight:600;
     margin-top:14px;
+  }
+  /* ---- Payment card ---- */
+  .payment-box{
+    margin-top:16px;
+    padding:16px 18px;
+    border-radius:16px;
+    background:linear-gradient(135deg, rgba(244,196,48,0.14), rgba(244,196,48,0.04));
+    border:1px solid rgba(244,196,48,0.35);
+    animation: rise .4s ease both;
+  }
+  .payment-box .ptitle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:700;
+    font-size:14px;
+    color:var(--gold);
+    letter-spacing:.02em;
+  }
+  .payment-box .pnote{
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+    margin:6px 0 12px;
+  }
+  .payment-box .pnote b{ color:#fff; }
+  .btn-revolut{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding:13px 16px;
+    border-radius:12px;
+    background:linear-gradient(135deg, #0666EB, #191c1f);
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+    text-decoration:none;
+    box-shadow:0 12px 26px -12px rgba(6,102,235,0.55);
+    border:none;
+  }
+  .btn-revolut:active{ transform:translateY(1px); }
+  .payment-cash{
+    text-align:center;
+    color:var(--muted);
+    font-size:12.5px;
+    font-weight:600;
+    margin-top:10px;
   }
   .hidden{ display:none !important; }
   .spinner{
     text-align:center;
     color:var(--muted);
-    padding:40px 0;
+    padding:60px 0;
     font-size:14px;
+    font-weight:600;
   }
   .cancelled-box{
-    background:#fdecea;
-    color:var(--red);
+    background:rgba(240,71,63,0.14);
+    color:#ff8a83;
+    border:1px solid rgba(240,71,63,0.35);
     padding:14px;
-    border-radius:10px;
-    font-weight:600;
+    border-radius:12px;
+    font-weight:700;
     text-align:center;
+    margin-top:16px;
+  }
+
+  /* ---- Squad lists ---- */
+  .section-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    margin:26px 0 10px;
+    color:var(--muted);
+  }
+  .section-title .dot{
+    width:8px; height:8px; border-radius:50%;
+  }
+  .section-title.starters .dot{ background:var(--grass); box-shadow:0 0 8px var(--grass-glow); }
+  .section-title.bench .dot{ background:var(--amber); }
+
+  ol.squad{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  ol.squad li{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:9px 4px;
+    border-bottom:1px solid var(--line);
+    font-size:15.5px;
+    font-weight:600;
+  }
+  ol.squad li:last-child{ border-bottom:none; }
+  .jersey{
+    flex-shrink:0;
+    width:30px; height:30px;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:15px;
+    color:#04150d;
+    background:linear-gradient(160deg, var(--grass), var(--grass-2));
+  }
+  .jersey.bench{
+    background:linear-gradient(160deg, var(--amber), #c9852a);
+  }
+  li.me .jersey{ box-shadow:0 0 0 2px var(--pitch-0), 0 0 0 4px var(--gold); }
+  li.me span.pname{ color:var(--gold); }
+  .empty{
+    color:var(--muted);
+    font-size:14px;
+    padding:10px 4px;
+    font-weight:600;
+  }
+
+  .me-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:20px;
+    padding-top:16px;
+    border-top:1px solid var(--line);
+    font-size:13px;
+    color:var(--muted);
+    font-weight:600;
+  }
+  .me-row a{ color:var(--muted); text-decoration:underline; text-underline-offset:3px; }
+
+  footer.credit{
+    text-align:center;
+    margin-top:26px;
+    color:#4d6459;
+    font-size:11.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+
+  /* ---- Goal celebration burst ---- */
+  #burst{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .burst-emoji{
+    position:absolute;
+    font-size:26px;
+    opacity:0;
+    animation: burst-fly .9s ease-out forwards;
+  }
+  @keyframes burst-fly{
+    0%{ opacity:1; transform:translate(0,0) scale(.4) rotate(0deg); }
+    100%{ opacity:0; transform:var(--fly) scale(1.1) rotate(var(--rot)); }
+  }
+  .goal-text{
+    position:fixed;
+    top:38%;
+    left:50%;
+    transform:translate(-50%,-50%) scale(.6);
+    font-family:'Bebas Neue',sans-serif;
+    font-size:64px;
+    letter-spacing:.06em;
+    color:var(--gold);
+    text-shadow:0 0 30px rgba(244,196,48,0.7), 0 4px 0 rgba(0,0,0,0.4);
+    opacity:0;
+    z-index:51;
+    pointer-events:none;
+    animation: goal-pop .9s cubic-bezier(.2,1.4,.4,1) forwards;
+  }
+  @keyframes goal-pop{
+    0%{ opacity:0; transform:translate(-50%,-50%) scale(.5); }
+    25%{ opacity:1; transform:translate(-50%,-50%) scale(1.08); }
+    75%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(1); }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>⚽ Fotbal Vineri</h1>
-    <p>O'Hanlon Park, Celbridge</p>
+    <div class="badge-line">Grup privat</div>
+    <h1>Vineri - Seară de Fotbal ⚽</h1>
+    <p>O'Hanlon Park · Celbridge</p>
   </header>
 
   <div id="loading" class="spinner">Se încarcă…</div>
 
   <!-- Ecran de inregistrare -->
   <div id="register-screen" class="card hidden">
-    <h2>Salut! 👋</h2>
-    <p class="meta">Completează o singură dată numele și telefonul, ca să poți confirma prezența în fiecare vineri.</p>
+    <h2 style="margin:0 0 4px; font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.03em;">Salut! 👋</h2>
+    <p style="margin:0; color:var(--muted); font-weight:600; font-size:14.5px;">Completează o singură dată numele și telefonul, ca să poți confirma prezența în fiecare vineri.</p>
     <label for="reg-name">Nume</label>
     <input type="text" id="reg-name" placeholder="Ex: Sebastian Neagu" autocomplete="name">
     <label for="reg-phone">Telefon</label>
     <input type="tel" id="reg-phone" placeholder="Ex: 0851234567" autocomplete="tel">
     <div id="reg-error" class="error-box hidden"></div>
     <button class="btn-primary" id="reg-submit">Intră în grup</button>
-    <p class="meta" style="margin-top:14px;font-size:12px;">Dacă te-ai mai înregistrat, introdu același număr de telefon și te recunoaștem automat.</p>
+    <p style="margin-top:14px;font-size:12px; color:var(--muted); font-weight:600;">Dacă te-ai mai înregistrat, introdu același număr de telefon și te recunoaștem automat.</p>
   </div>
 
   <!-- Ecran principal (meci curent) -->
   <div id="main-screen" class="hidden">
     <div class="card" id="match-card">
-      <h2 id="match-date">—</h2>
-      <p class="meta" id="match-time-loc">—</p>
+      <div class="kickoff-row">
+        <span class="day-pill" id="match-day">VINERI</span>
+      </div>
+      <div class="match-date" id="match-date">—</div>
+      <div class="match-meta">
+        <span id="match-time">🕖 —</span>
+        <span id="match-loc">📍 —</span>
+      </div>
       <div id="match-status-pill"></div>
-      <div class="progress"><div id="match-progress-bar" style="width:0%"></div></div>
-      <p class="meta" id="match-count">—</p>
 
-      <div id="cancelled-banner" class="cancelled-box hidden" style="margin-top:14px;">Meciul de vinerea aceasta a fost anulat.</div>
+      <div class="capacity-wrap">
+        <div class="capacity-label"><span>Locuri ocupate</span><b id="capacity-fraction">0/0</b></div>
+        <div class="ticks" id="ticks"></div>
+      </div>
+      <p style="margin:8px 0 0; color:var(--muted); font-weight:600; font-size:13px;" id="waitlist-note"></p>
 
-      <button class="btn-primary hidden" id="btn-join">Particip ✅</button>
+      <div id="cancelled-banner" class="cancelled-box hidden">Meciul de vinerea aceasta a fost anulat.</div>
+
+      <button class="btn-primary hidden" id="btn-join">Particip ⚽</button>
       <button class="btn-leave hidden" id="btn-leave">Nu mai particip</button>
 
       <div id="rsvp-error" class="error-box hidden"></div>
 
-      <div class="section-title">Confirmați</div>
-      <ol class="players" id="confirmed-list"></ol>
+      <div id="payment-box" class="payment-box hidden">
+        <div class="ptitle">💳 Achitare teren</div>
+        <p class="pnote">Contribuție <b id="pay-price">5€</b> / jucător — cash după meci sau prin Revolut, chiar acum.</p>
+        <a href="#" id="btn-revolut" class="btn-revolut" target="_blank" rel="noopener">Plătește pe Revolut ↗</a>
+        <p class="payment-cash">Sau achiți cash, direct la meci.</p>
+      </div>
+
+      <div class="section-title starters"><span class="dot"></span>Titulari</div>
+      <ol class="squad" id="confirmed-list"></ol>
       <p class="empty hidden" id="confirmed-empty">Niciun jucător confirmat încă.</p>
 
       <div id="waitlist-wrap">
-        <div class="section-title">Listă de rezervă</div>
-        <ol class="players" id="waitlist-list"></ol>
+        <div class="section-title bench"><span class="dot"></span>Pe bancă (rezerve)</div>
+        <ol class="squad" id="waitlist-list"></ol>
       </div>
 
       <div class="me-row">
@@ -227,8 +553,11 @@
         <a href="#" id="not-me-link">Nu sunt eu</a>
       </div>
     </div>
+    <footer class="credit">Vineri - Seară de Fotbal · O'Hanlon Park</footer>
   </div>
 </div>
+
+<div id="burst"></div>
 
 <script>
 (function(){
@@ -240,13 +569,12 @@
   };
 
   const ZILE = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
-  const LUNI = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
+  const LUNI = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','nov','dec'];
 
-  function formatDateRo(iso){
+  function formatDateParts(iso){
     const [y,m,d] = iso.split('-').map(Number);
     const dt = new Date(Date.UTC(y, m-1, d));
-    const zi = ZILE[dt.getUTCDay()];
-    return `${zi}, ${d} ${LUNI[m-1]} ${y}`;
+    return { zi: ZILE[dt.getUTCDay()], text: `${d} ${LUNI[m-1]}` };
   }
 
   function getToken(){
@@ -260,17 +588,10 @@
     }
     return localStorage.getItem('ff_token');
   }
-
-  function setToken(token){
-    localStorage.setItem('ff_token', token);
-  }
-
-  function clearToken(){
-    localStorage.removeItem('ff_token');
-  }
+  function setToken(token){ localStorage.setItem('ff_token', token); }
+  function clearToken(){ localStorage.removeItem('ff_token'); }
 
   const el = (id) => document.getElementById(id);
-
   function show(id){ el(id).classList.remove('hidden'); }
   function hide(id){ el(id).classList.add('hidden'); }
 
@@ -286,17 +607,13 @@
 
   async function init(){
     hide('loading');
-    if (!currentToken) {
-      show('register-screen');
-      return;
-    }
+    if (!currentToken) { show('register-screen'); return; }
     try {
       const me = await api(`${API.me}?token=${encodeURIComponent(currentToken)}`);
       myName = me.name;
       show('main-screen');
       await loadMatch();
     } catch (e) {
-      // token invalid — reinregistrare
       clearToken();
       currentToken = null;
       show('register-screen');
@@ -308,27 +625,45 @@
     renderMatch(data);
   }
 
+  function renderTicks(confirmedCount, waitlistCount, capacity){
+    const wrap = el('ticks');
+    wrap.style.gridTemplateColumns = `repeat(${Math.max(capacity,1)}, 1fr)`;
+    let html = '';
+    for (let i = 0; i < capacity; i++){
+      html += `<div class="tick ${i < confirmedCount ? 'filled' : ''}"></div>`;
+    }
+    wrap.innerHTML = html;
+  }
+
   function renderMatch(data){
     const m = data.match;
-    el('match-date').textContent = formatDateRo(m.date);
-    el('match-time-loc').textContent = `${m.time} • ${m.location}`;
-    el('match-count').textContent = `${data.confirmedCount} / ${m.capacity} confirmați` + (data.waitlist.length ? ` • ${data.waitlist.length} pe lista de rezervă` : '');
-    const pct = m.capacity > 0 ? Math.min(100, Math.round((data.confirmedCount / m.capacity) * 100)) : 0;
-    el('match-progress-bar').style.width = pct + '%';
+    const { zi, text } = formatDateParts(m.date);
+    el('match-day').textContent = zi.toUpperCase();
+    el('match-date').textContent = text;
+    el('match-time').textContent = `🕖 ${m.time}`;
+    el('match-loc').textContent = `📍 ${m.location}`;
+
+    el('capacity-fraction').textContent = `${data.confirmedCount}/${m.capacity}`;
+    renderTicks(data.confirmedCount, data.waitlist.length, m.capacity);
+    el('waitlist-note').textContent = data.waitlist.length ? `+ ${data.waitlist.length} pe lista de rezervă` : '';
 
     const pill = el('match-status-pill');
     pill.className = 'status-pill';
-    if (data.myStatus === 'confirmed') { pill.textContent = 'Ești confirmat ✅'; pill.classList.add('status-confirmed'); }
-    else if (data.myStatus === 'waitlist') { pill.textContent = 'Ești pe lista de rezervă ⏳'; pill.classList.add('status-waitlist'); }
-    else { pill.textContent = 'Nu ești încă înscris'; pill.classList.add('status-none'); }
+    if (data.myStatus === 'confirmed') { pill.innerHTML = '✅ Ești titular'; pill.classList.add('status-confirmed'); }
+    else if (data.myStatus === 'waitlist') { pill.innerHTML = '⏳ Ești pe bancă'; pill.classList.add('status-waitlist'); }
+    else { pill.innerHTML = 'Nu ești încă înscris'; pill.classList.add('status-none'); }
 
-    el('confirmed-list').innerHTML = data.confirmed.map((p, i) => `<li><span class="num">${i+1}.</span><span>${escapeHtml(p.name)}</span></li>`).join('');
+    el('confirmed-list').innerHTML = data.confirmed.map((p, i) =>
+      `<li class="${myName && p.name===myName && data.myStatus==='confirmed' ? 'me' : ''}"><span class="jersey">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span></li>`
+    ).join('');
     el('confirmed-empty').classList.toggle('hidden', data.confirmed.length > 0);
 
     const waitlistWrap = el('waitlist-wrap');
     if (data.waitlist.length) {
       waitlistWrap.classList.remove('hidden');
-      el('waitlist-list').innerHTML = data.waitlist.map((p, i) => `<li><span class="num">${i+1}.</span><span>${escapeHtml(p.name)}</span></li>`).join('');
+      el('waitlist-list').innerHTML = data.waitlist.map((p, i) =>
+        `<li class="${myName && p.name===myName && data.myStatus==='waitlist' ? 'me' : ''}"><span class="jersey bench">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span></li>`
+      ).join('');
     } else {
       waitlistWrap.classList.add('hidden');
     }
@@ -338,12 +673,38 @@
     el('btn-join').classList.toggle('hidden', cancelled || data.myStatus !== 'none');
     el('btn-leave').classList.toggle('hidden', cancelled || data.myStatus === 'none');
 
-    el('me-name').textContent = `Ești conectat ca ${myName}`;
+    const showPayment = !cancelled && data.myStatus === 'confirmed';
+    el('payment-box').classList.toggle('hidden', !showPayment);
+    if (showPayment) {
+      const price = m.price != null ? m.price : 5;
+      const priceText = Number.isInteger(price) ? `${price}€` : `${price}€`.replace('.', ',');
+      el('pay-price').textContent = priceText;
+      el('btn-revolut').href = `https://revolut.me/${encodeURIComponent(m.revtag || 'sbnn3')}`;
+    }
+
+    el('me-name').textContent = `Conectat ca ${myName}`;
     hide('rsvp-error');
   }
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function celebrate(){
+    const burst = el('burst');
+    const emojis = ['⚽','✨','🟢','⭐'];
+    let inner = `<div class="goal-text">GOOOL!</div>`;
+    for (let i = 0; i < 14; i++){
+      const angle = (Math.PI * 2 * i) / 14;
+      const dist = 90 + Math.random()*70;
+      const x = Math.cos(angle)*dist;
+      const y = Math.sin(angle)*dist;
+      const rot = (Math.random()*360)|0;
+      const e = emojis[i % emojis.length];
+      inner += `<div class="burst-emoji" style="--fly:translate(${x}px,${y}px); --rot:${rot}deg; animation-delay:${(i*0.02).toFixed(2)}s;">${e}</div>`;
+    }
+    burst.innerHTML = inner;
+    setTimeout(() => { burst.innerHTML = ''; }, 950);
   }
 
   el('reg-submit').addEventListener('click', async () => {
@@ -384,6 +745,7 @@
         body: JSON.stringify({token: currentToken, action}),
       });
       renderMatch(data);
+      if (action === 'join') celebrate();
     } catch (e) {
       el('rsvp-error').textContent = e.message;
       show('rsvp-error');

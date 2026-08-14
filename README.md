@@ -47,7 +47,19 @@ Ca să funcționeze din WhatsApp pentru toți cei 15-20 de oameni, aplicația tr
    - **Environment Variable**: adaugă `ADMIN_KEY` cu o valoare secretă a ta.
 5. Apeși „Create Web Service”. În câteva minute primești un link de tipul `https://fotbal-vineri.onrender.com` — acela e linkul pe care îl trimiți în grupul de WhatsApp.
 
-**Notă importantă despre Render (plan gratuit):** discul se poate reseta la un redeploy, ceea ce ar șterge `data.json` (istoricul și jucătorii înregistrați). Pentru un grup mic, asta nu e o problemă gravă — jucătorii se re-înregistrează rapid — dar dacă vrei persistență garantată pe termen lung, cea mai simplă soluție e un „Persistent Disk” (plătit, foarte ieftin) sau găzduirea pe un VPS mic (ex. un Raspberry Pi acasă, sau un server de câțiva euro/lună de la Hetzner/DigitalOcean), unde fișierul `data.json` rămâne mereu pe disc.
+**Notă importantă despre Render (plan gratuit):** discul se resetează la fiecare redeploy/repornire, ceea ce ar șterge `data.json` (istoricul și jucătorii înregistrați) dacă aplicația s-ar baza doar pe fișierul local.
+
+### Persistență reală (Upstash Redis, gratuit)
+
+Ca datele (jucători, meciuri, prezențe) să rămână salvate garantat, aplicația poate folosi [Upstash](https://upstash.com) — o bază de date Redis gratuită, accesată prin REST API (fără nicio dependință npm).
+
+1. Creează un cont gratuit pe [upstash.com](https://upstash.com) (poți intra direct cu GitHub).
+2. „Create Database” → alege un nume și o regiune (ideal cât mai aproape de regiunea serviciului Render), planul „Free”.
+3. Din pagina bazei de date, secțiunea „Connect” → tab „REST”, copiezi cele două valori: `UPSTASH_REDIS_REST_URL` și `UPSTASH_REDIS_REST_TOKEN`.
+4. Le adaugi ca variabile de mediu în Render (Environment → Add Environment Variable), exact cu aceste două nume.
+5. La următorul deploy, aplicația detectează automat variabilele și salvează toate datele în Upstash — persistență garantată, indiferent de reporniri.
+
+Dacă aceste variabile nu sunt setate, aplicația funcționează în continuare, dar salvează doar local (risc de pierdere a datelor la redeploy pe Render).
 
 ### Alternativă: un mic server acasă / VPS
 
