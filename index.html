@@ -337,6 +337,51 @@
     font-weight:600;
     margin-top:10px;
   }
+
+  /* ---- Location / map card ---- */
+  .location-box{
+    margin-top:16px;
+    padding:16px 18px;
+    border-radius:16px;
+    background:linear-gradient(135deg, rgba(34,197,94,0.12), rgba(34,197,94,0.03));
+    border:1px solid rgba(34,197,94,0.3);
+    animation: rise .4s ease both;
+  }
+  .location-box .ltitle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:700;
+    font-size:14px;
+    color:#5eeba3;
+    letter-spacing:.02em;
+    margin-bottom:12px;
+  }
+  .map-frame{
+    width:100%;
+    height:170px;
+    border:0;
+    border-radius:12px;
+    display:block;
+    filter:saturate(0.9) brightness(0.9);
+  }
+  .btn-maps{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding:12px 16px;
+    margin-top:12px;
+    border-radius:12px;
+    background:rgba(255,255,255,0.06);
+    color:#fff;
+    font-weight:700;
+    font-size:14px;
+    text-decoration:none;
+    border:1px solid var(--card-border);
+  }
+  .btn-maps:active{ transform:translateY(1px); }
   .hidden{ display:none !important; }
   .spinner{
     text-align:center;
@@ -539,6 +584,12 @@
         <p class="payment-cash">Sau achiți cash, direct la meci.</p>
       </div>
 
+      <div id="location-box" class="location-box hidden">
+        <div class="ltitle">📍 Cum ajungi</div>
+        <iframe class="map-frame" id="map-frame" src="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <a href="#" id="btn-maps" class="btn-maps" target="_blank" rel="noopener">Deschide în Google Maps ↗</a>
+      </div>
+
       <div class="section-title starters"><span class="dot"></span>Titulari</div>
       <ol class="squad" id="confirmed-list"></ol>
       <p class="empty hidden" id="confirmed-empty">Niciun jucător confirmat încă.</p>
@@ -604,6 +655,7 @@
 
   let currentToken = getToken();
   let myName = '';
+  let lastMapLocation = null;
 
   async function init(){
     hide('loading');
@@ -680,6 +732,16 @@
       const priceText = Number.isInteger(price) ? `${price}€` : `${price}€`.replace('.', ',');
       el('pay-price').textContent = priceText;
       el('btn-revolut').href = `https://revolut.me/${encodeURIComponent(m.revtag || 'sbnn3')}`;
+    }
+
+    el('location-box').classList.toggle('hidden', !showPayment);
+    if (showPayment) {
+      const query = encodeURIComponent(m.location);
+      if (lastMapLocation !== m.location) {
+        el('map-frame').src = `https://maps.google.com/maps?q=${query}&z=15&output=embed`;
+        lastMapLocation = m.location;
+      }
+      el('btn-maps').href = `https://www.google.com/maps/search/?api=1&query=${query}`;
     }
 
     el('me-name').textContent = `Conectat ca ${myName}`;
