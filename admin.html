@@ -98,8 +98,27 @@
     if (res.ok) load();
   }
 
+  let resetArmed = false;
+  let resetTimer = null;
+
+  function armReset(){
+    resetArmed = true;
+    el('reset').textContent = 'Sigur? Apasă din nou ca să confirmi';
+    el('reset-msg').textContent = 'Ai 5 secunde să apeși încă o dată ca să confirmi ștergerea.';
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(disarmReset, 5000);
+  }
+
+  function disarmReset(){
+    resetArmed = false;
+    clearTimeout(resetTimer);
+    el('reset').textContent = 'Resetează lista pentru meciul curent';
+    el('reset-msg').textContent = '';
+  }
+
   async function resetList(){
-    if (!confirm('Sigur ștergi toți participanții din lista meciului curent? Nu poate fi anulat.')) return;
+    if (!resetArmed) { armReset(); return; }
+    disarmReset();
     const res = await fetch('/api/admin/reset', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
