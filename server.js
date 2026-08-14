@@ -165,16 +165,20 @@ function matchView(data, match, token) {
   const confirmed = rsvpsForMatch
     .filter((r) => r.status === 'confirmed')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((r) => ({ name: playerName(data, r.playerId) }));
+    .map((r) => ({ name: playerName(data, r.playerId), payment: r.payment || null }));
   const waitlist = rsvpsForMatch
     .filter((r) => r.status === 'waitlist')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((r) => ({ name: playerName(data, r.playerId) }));
+    .map((r) => ({ name: playerName(data, r.playerId), payment: r.payment || null }));
 
   let myStatus = 'none';
+  let myPayment = null;
   if (token) {
     const mine = data.rsvps.find((r) => r.matchId === match.id && r.playerId === token && r.status !== 'cancelled');
-    if (mine) myStatus = mine.status;
+    if (mine) {
+      myStatus = mine.status;
+      myPayment = mine.payment || null;
+    }
   }
 
   return {
@@ -189,6 +193,7 @@ function matchView(data, match, token) {
       status: match.status,
     },
     myStatus,
+    myPayment,
     confirmed,
     waitlist,
     confirmedCount: confirmed.length,
@@ -325,12 +330,14 @@ const server = http.createServer(async (req, res) => {
           if (entry) {
             entry.status = newStatus;
             entry.createdAt = new Date().toISOString();
+            entry.payment = null; // participare noua — alege din nou metoda de plata
           } else {
             entry = {
               id: crypto.randomUUID(),
               matchId: match.id,
               playerId: token,
               status: newStatus,
+              payment: null,
               createdAt: new Date().toISOString(),
             };
             data.rsvps.push(entry);
@@ -348,6 +355,28 @@ const server = http.createServer(async (req, res) => {
           }
         }
       }
+
+      await persist(data);
+      return sendJSON(res, 200, matchView(data, match, token));
+    }
+
+    // ---- API: alegere/schimbare metoda de plata pentru participarea curenta ----
+    if (pathname === '/api/payment' && req.method === 'POST') {
+      const body = await readBody(req);
+      const token = body.token;
+      const method = body.method === undefined ? null : body.method; // 'revolut' | 'cash' | null
+      if (!token) return sendJSON(res, 400, { error: 'Cerere invalida.' });
+      if (method !== null && !['revolut', 'cash'].includes(method)) {
+        return sendJSON(res, 400, { error: 'Metoda de plata invalida.' });
+      }
+      const data = getData();
+      const player = data.players.find((p) => p.id === token);
+      if (!player) return sendJSON(res, 404, { error: 'Jucator negasit. Inregistreaza-te din nou.' });
+
+      const match = await getOrCreateCurrentMatch(data);
+      const entry = data.rsvps.find((r) => r.matchId === match.id && r.playerId === token && r.status !== 'cancelled');
+      if (!entry) return sendJSON(res, 409, { error: 'Trebuie sa participi mai intai.' });
+      entry.payment = method;
 
       await persist(data);
       return sendJSON(res, 200, matchView(data, match, token));

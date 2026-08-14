@@ -330,11 +330,54 @@
     border:none;
   }
   .btn-revolut:active{ transform:translateY(1px); }
-  .payment-cash{
+
+  .payment-choice{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:12px;
+  }
+  .pay-option{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding:13px 16px;
+    border-radius:12px;
+    font-weight:700;
+    font-size:14.5px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .pay-option-revolut{
+    background:linear-gradient(135deg, #0666EB, #191c1f);
+    color:#fff;
+    border:none;
+    box-shadow:0 12px 26px -12px rgba(6,102,235,0.55);
+  }
+  .pay-option-revolut:active{ transform:translateY(1px); }
+  .pay-option-cash{
+    background:rgba(255,255,255,0.06);
+    color:#fff;
+    border:1px solid var(--card-border);
+  }
+  .pay-option-cash:active{ transform:translateY(1px); }
+
+  .payment-chosen{ margin-top:12px; }
+  .pnote-cash{
+    color:#5eeba3;
+    font-size:14px;
+    font-weight:700;
+    margin:6px 0 12px;
+  }
+  .change-link{
+    display:block;
     text-align:center;
     color:var(--muted);
     font-size:12.5px;
     font-weight:600;
+    text-decoration:underline;
     margin-top:10px;
   }
 
@@ -455,6 +498,17 @@
   }
   li.me .jersey{ box-shadow:0 0 0 2px var(--pitch-0), 0 0 0 4px var(--gold); }
   li.me span.pname{ color:var(--gold); }
+  .pay-badge{
+    margin-left:auto;
+    flex-shrink:0;
+    font-size:11.5px;
+    font-weight:700;
+    padding:4px 9px;
+    border-radius:999px;
+    letter-spacing:.01em;
+  }
+  .pay-badge-revolut{ background:rgba(6,102,235,0.18); color:#8ab4ff; }
+  .pay-badge-cash{ background:rgba(34,197,94,0.16); color:#5eeba3; }
   .empty{
     color:var(--muted);
     font-size:14px;
@@ -578,10 +632,23 @@
       <div id="rsvp-error" class="error-box hidden"></div>
 
       <div id="payment-box" class="payment-box hidden">
-        <div class="ptitle">💳 Achitare teren</div>
-        <p class="pnote">Contribuție <b id="pay-price">5€</b> / jucător — cash după meci sau prin Revolut, chiar acum.</p>
-        <a href="#" id="btn-revolut" class="btn-revolut" target="_blank" rel="noopener">Plătește pe Revolut ↗</a>
-        <p class="payment-cash">Sau achiți cash, direct la meci.</p>
+        <div class="ptitle">💳 Achitare teren — <span id="pay-price">5€</span> / jucător</div>
+
+        <div id="payment-choice" class="payment-choice hidden">
+          <button id="btn-choose-revolut" class="pay-option pay-option-revolut">💙 Plătesc cu Revolut, acum</button>
+          <button id="btn-choose-cash" class="pay-option pay-option-cash">💵 Plătesc cash, după meci</button>
+        </div>
+
+        <div id="payment-chosen-revolut" class="payment-chosen hidden">
+          <p class="pnote">Ai ales <b>Revolut</b>. Trimite <b id="pay-price-2">5€</b> la:</p>
+          <a href="#" id="btn-revolut" class="btn-revolut" target="_blank" rel="noopener">Plătește pe Revolut ↗</a>
+          <a href="#" id="btn-change-revolut" class="change-link">Schimbă opțiunea de plată</a>
+        </div>
+
+        <div id="payment-chosen-cash" class="payment-chosen hidden">
+          <p class="pnote pnote-cash">✅ Ai ales să plătești <b>cash, direct la meci</b>.</p>
+          <a href="#" id="btn-change-cash" class="change-link">Schimbă opțiunea de plată</a>
+        </div>
       </div>
 
       <div id="location-box" class="location-box hidden">
@@ -617,6 +684,7 @@
     me: '/api/me',
     current: '/api/match/current',
     rsvp: '/api/rsvp',
+    payment: '/api/payment',
   };
 
   const ZILE = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
@@ -706,7 +774,7 @@
     else { pill.innerHTML = 'Nu ești încă înscris'; pill.classList.add('status-none'); }
 
     el('confirmed-list').innerHTML = data.confirmed.map((p, i) =>
-      `<li class="${myName && p.name===myName && data.myStatus==='confirmed' ? 'me' : ''}"><span class="jersey">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span></li>`
+      `<li class="${myName && p.name===myName && data.myStatus==='confirmed' ? 'me' : ''}"><span class="jersey">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${paymentBadge(p.payment)}</li>`
     ).join('');
     el('confirmed-empty').classList.toggle('hidden', data.confirmed.length > 0);
 
@@ -714,7 +782,7 @@
     if (data.waitlist.length) {
       waitlistWrap.classList.remove('hidden');
       el('waitlist-list').innerHTML = data.waitlist.map((p, i) =>
-        `<li class="${myName && p.name===myName && data.myStatus==='waitlist' ? 'me' : ''}"><span class="jersey bench">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span></li>`
+        `<li class="${myName && p.name===myName && data.myStatus==='waitlist' ? 'me' : ''}"><span class="jersey bench">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${paymentBadge(p.payment)}</li>`
       ).join('');
     } else {
       waitlistWrap.classList.add('hidden');
@@ -731,7 +799,13 @@
       const price = m.price != null ? m.price : 5;
       const priceText = Number.isInteger(price) ? `${price}€` : `${price}€`.replace('.', ',');
       el('pay-price').textContent = priceText;
+      el('pay-price-2').textContent = priceText;
       el('btn-revolut').href = `https://revolut.me/${encodeURIComponent(m.revtag || 'sbnn3')}`;
+
+      const myPayment = data.myPayment || null;
+      el('payment-choice').classList.toggle('hidden', myPayment !== null);
+      el('payment-chosen-revolut').classList.toggle('hidden', myPayment !== 'revolut');
+      el('payment-chosen-cash').classList.toggle('hidden', myPayment !== 'cash');
     }
 
     el('location-box').classList.toggle('hidden', !showPayment);
@@ -750,6 +824,12 @@
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function paymentBadge(payment){
+    if (payment === 'revolut') return '<span class="pay-badge pay-badge-revolut">💙 Revolut</span>';
+    if (payment === 'cash') return '<span class="pay-badge pay-badge-cash">💵 Cash</span>';
+    return '';
   }
 
   function celebrate(){
@@ -819,6 +899,25 @@
     clearToken();
     window.location.reload();
   });
+
+  async function setPayment(method){
+    try {
+      const data = await api(API.payment, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token: currentToken, method}),
+      });
+      renderMatch(data);
+    } catch (e) {
+      el('rsvp-error').textContent = e.message;
+      show('rsvp-error');
+    }
+  }
+
+  el('btn-choose-revolut').addEventListener('click', () => setPayment('revolut'));
+  el('btn-choose-cash').addEventListener('click', () => setPayment('cash'));
+  el('btn-change-revolut').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
+  el('btn-change-cash').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
 
   init();
 })();
