@@ -1,2 +1,70 @@
-# vineri-fotbal
-Aplicatie pentru organizarea meciurilor de fotbal d vineri la Ohanlon Park, Celbridge
+# ⚽ Fotbal Vineri — O'Hanlon Park, Celbridge
+
+Aplicație simplă pentru gestionarea prezenței la meciurile de fotbal de vineri seara. Jucătorii se înregistrează o singură dată (nume + telefon) și apoi confirmă prezența în fiecare săptămână cu un singur click, direct de pe telefon.
+
+## Ce face aplicația
+
+- Fiecare persoană se înregistrează o dată (nume + telefon), fără parolă.
+- În fiecare săptămână apare automat meciul de vineri viitoare (fără să faci tu ceva).
+- Jucătorii apasă „Particip” — dacă sunt locuri libere, sunt confirmați direct; dacă locurile s-au ocupat, intră automat pe lista de rezervă.
+- Dacă cineva se retrage, primul de pe lista de rezervă este promovat automat la „confirmat”.
+- Tu, ca organizator, ai o pagină de admin (`/admin`) unde poți schimba numărul de locuri, ora, locația, sau poți anula meciul unei săptămâni.
+
+Capacitatea implicită este 15 locuri (o poți schimba oricând din pagina de admin).
+
+## Cum rulezi aplicația local (pe orice calculator cu Node.js instalat)
+
+Nu are nicio dependință externă — folosește doar Node.js standard, deci nu trebuie să rulezi `npm install`.
+
+```
+node server.js
+```
+
+Apoi deschizi în browser `http://localhost:3000`.
+
+Datele (jucători, meciuri, prezențe) se salvează automat în fișierul `data.json` din același folder. Nu șterge acest fișier — e „baza de date” a aplicației.
+
+### Cheia de admin
+
+Pagina de admin (`/admin`) e protejată de o cheie simplă. Implicit este `schimba-ma-te-rog` — **schimb-o** înainte să dai acces oricui la link-ul aplicației, altfel oricine poate modifica meciul. O schimbi setând o variabilă de mediu la pornire:
+
+```
+ADMIN_KEY="cheia-mea-secreta" node server.js
+```
+
+## Cum o pui online, ca toată lumea din grup să o poată folosi
+
+Ca să funcționeze din WhatsApp pentru toți cei 15-20 de oameni, aplicația trebuie găzduită undeva cu o adresă publică (un link). Cea mai simplă variantă, gratuită, fără cunoștințe tehnice avansate:
+
+### Opțiunea recomandată: Render.com
+
+1. Creează un cont gratuit pe [render.com](https://render.com).
+2. Încarcă acest folder într-un repository nou pe GitHub (poți folosi [github.com](https://github.com) → „New repository” → încarci fișierele direct din browser, fără linia de comandă).
+3. În Render: „New +” → „Web Service” → conectezi repository-ul de GitHub.
+4. Setări:
+   - **Build Command**: (lasă gol, nu e nevoie)
+   - **Start Command**: `node server.js`
+   - **Environment Variable**: adaugă `ADMIN_KEY` cu o valoare secretă a ta.
+5. Apeși „Create Web Service”. În câteva minute primești un link de tipul `https://fotbal-vineri.onrender.com` — acela e linkul pe care îl trimiți în grupul de WhatsApp.
+
+**Notă importantă despre Render (plan gratuit):** discul se poate reseta la un redeploy, ceea ce ar șterge `data.json` (istoricul și jucătorii înregistrați). Pentru un grup mic, asta nu e o problemă gravă — jucătorii se re-înregistrează rapid — dar dacă vrei persistență garantată pe termen lung, cea mai simplă soluție e un „Persistent Disk” (plătit, foarte ieftin) sau găzduirea pe un VPS mic (ex. un Raspberry Pi acasă, sau un server de câțiva euro/lună de la Hetzner/DigitalOcean), unde fișierul `data.json` rămâne mereu pe disc.
+
+### Alternativă: un mic server acasă / VPS
+
+Dacă ai deja (sau vrei) un server mic (Raspberry Pi, VPS de câțiva euro), aplicația rulează identic cu `node server.js`, eventual pornită automat cu `pm2` sau un serviciu `systemd`, în spatele unui domeniu propriu.
+
+## Cum arată fluxul pentru jucători
+
+1. Cineva primește link-ul aplicației (îl pui fixat în grupul de WhatsApp).
+2. Prima dată completează numele și telefonul — durează 10 secunde.
+3. De atunci încolo, dacă deschide același link (sau îl salvează pe ecranul principal al telefonului ca o „aplicație”), vede direct meciul de vinerea curentă și poate apăsa „Particip”.
+4. Dacă cineva schimbă telefonul sau șterge datele browserului, poate „recupera” contul introducând din nou același număr de telefon — nu se creează un jucător duplicat.
+
+## Idei pentru pași următori (dacă vrei să extinzi aplicația)
+
+- Notificare automată (ex. joi seara) către cei care nu au răspuns încă — necesită integrare cu WhatsApp Business API sau trimitere de SMS/email.
+- Istoric de prezență și un mic clasament („cine a jucat cel mai des”).
+- Generare automată a celor două echipe.
+- Split automat al costului terenului între cei prezenți.
+
+Spune-mi dacă vrei să construim oricare dintre acestea — structura de date (jucători, meciuri, prezențe) e deja pregătită să susțină toate ideile de mai sus.

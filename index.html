@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Fotbal Vineri — O'Hanlon Park</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+<style>
+  :root{
+    --green:#1f8a4c;
+    --green-dark:#166a3a;
+    --bg:#f4f6f5;
+    --card:#ffffff;
+    --text:#1c2620;
+    --muted:#6b7770;
+    --border:#e3e8e5;
+    --red:#c0392b;
+    --amber:#b7791f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:480px;
+    margin:0 auto;
+    padding:20px 16px 60px;
+  }
+  header.top{
+    text-align:center;
+    padding:18px 0 8px;
+  }
+  header.top h1{
+    font-size:22px;
+    margin:0 0 2px;
+  }
+  header.top p{
+    margin:0;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+    margin-top:16px;
+    box-shadow:0 1px 3px rgba(20,30,25,0.04);
+  }
+  .card h2{
+    margin:0 0 4px;
+    font-size:19px;
+  }
+  .meta{
+    color:var(--muted);
+    font-size:14px;
+    margin:2px 0;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    margin:14px 0 6px;
+    color:var(--text);
+  }
+  input[type=text], input[type=tel]{
+    width:100%;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    font-size:16px;
+    background:#fbfcfb;
+  }
+  input:focus{ outline:2px solid var(--green); border-color:var(--green); }
+  button{
+    font-size:16px;
+    font-weight:700;
+    border:none;
+    border-radius:12px;
+    padding:14px 18px;
+    cursor:pointer;
+    width:100%;
+    margin-top:16px;
+  }
+  .btn-primary{ background:var(--green); color:#fff; }
+  .btn-primary:active{ background:var(--green-dark); }
+  .btn-leave{ background:#fdecea; color:var(--red); }
+  .btn-secondary{ background:#eef1ef; color:var(--text); }
+  .status-pill{
+    display:inline-block;
+    padding:5px 12px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+    margin-top:10px;
+  }
+  .status-confirmed{ background:#e5f6ec; color:var(--green-dark); }
+  .status-waitlist{ background:#fdf3e0; color:var(--amber); }
+  .status-none{ background:#eef1ef; color:var(--muted); }
+  .progress{
+    height:8px;
+    background:#eef1ef;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:12px;
+  }
+  .progress > div{
+    height:100%;
+    background:var(--green);
+  }
+  ol.players{
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+  }
+  ol.players li{
+    display:flex;
+    gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid var(--border);
+    font-size:15px;
+  }
+  ol.players li:last-child{ border-bottom:none; }
+  ol.players li .num{
+    color:var(--muted);
+    width:22px;
+    flex-shrink:0;
+  }
+  .section-title{
+    font-size:14px;
+    font-weight:700;
+    margin:22px 0 2px;
+    color:var(--text);
+  }
+  .empty{
+    color:var(--muted);
+    font-size:14px;
+    padding:8px 0;
+  }
+  .me-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:14px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .me-row a{ color:var(--muted); }
+  .error-box{
+    background:#fdecea;
+    color:var(--red);
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:14px;
+    margin-top:14px;
+  }
+  .hidden{ display:none !important; }
+  .spinner{
+    text-align:center;
+    color:var(--muted);
+    padding:40px 0;
+    font-size:14px;
+  }
+  .cancelled-box{
+    background:#fdecea;
+    color:var(--red);
+    padding:14px;
+    border-radius:10px;
+    font-weight:600;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>⚽ Fotbal Vineri</h1>
+    <p>O'Hanlon Park, Celbridge</p>
+  </header>
+
+  <div id="loading" class="spinner">Se încarcă…</div>
+
+  <!-- Ecran de inregistrare -->
+  <div id="register-screen" class="card hidden">
+    <h2>Salut! 👋</h2>
+    <p class="meta">Completează o singură dată numele și telefonul, ca să poți confirma prezența în fiecare vineri.</p>
+    <label for="reg-name">Nume</label>
+    <input type="text" id="reg-name" placeholder="Ex: Sebastian Neagu" autocomplete="name">
+    <label for="reg-phone">Telefon</label>
+    <input type="tel" id="reg-phone" placeholder="Ex: 0851234567" autocomplete="tel">
+    <div id="reg-error" class="error-box hidden"></div>
+    <button class="btn-primary" id="reg-submit">Intră în grup</button>
+    <p class="meta" style="margin-top:14px;font-size:12px;">Dacă te-ai mai înregistrat, introdu același număr de telefon și te recunoaștem automat.</p>
+  </div>
+
+  <!-- Ecran principal (meci curent) -->
+  <div id="main-screen" class="hidden">
+    <div class="card" id="match-card">
+      <h2 id="match-date">—</h2>
+      <p class="meta" id="match-time-loc">—</p>
+      <div id="match-status-pill"></div>
+      <div class="progress"><div id="match-progress-bar" style="width:0%"></div></div>
+      <p class="meta" id="match-count">—</p>
+
+      <div id="cancelled-banner" class="cancelled-box hidden" style="margin-top:14px;">Meciul de vinerea aceasta a fost anulat.</div>
+
+      <button class="btn-primary hidden" id="btn-join">Particip ✅</button>
+      <button class="btn-leave hidden" id="btn-leave">Nu mai particip</button>
+
+      <div id="rsvp-error" class="error-box hidden"></div>
+
+      <div class="section-title">Confirmați</div>
+      <ol class="players" id="confirmed-list"></ol>
+      <p class="empty hidden" id="confirmed-empty">Niciun jucător confirmat încă.</p>
+
+      <div id="waitlist-wrap">
+        <div class="section-title">Listă de rezervă</div>
+        <ol class="players" id="waitlist-list"></ol>
+      </div>
+
+      <div class="me-row">
+        <span id="me-name">—</span>
+        <a href="#" id="not-me-link">Nu sunt eu</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const API = {
+    register: '/api/register',
+    me: '/api/me',
+    current: '/api/match/current',
+    rsvp: '/api/rsvp',
+  };
+
+  const ZILE = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
+  const LUNI = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
+
+  function formatDateRo(iso){
+    const [y,m,d] = iso.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m-1, d));
+    const zi = ZILE[dt.getUTCDay()];
+    return `${zi}, ${d} ${LUNI[m-1]} ${y}`;
+  }
+
+  function getToken(){
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('t');
+    if (fromUrl) {
+      localStorage.setItem('ff_token', fromUrl);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('t');
+      window.history.replaceState({}, '', url.toString());
+    }
+    return localStorage.getItem('ff_token');
+  }
+
+  function setToken(token){
+    localStorage.setItem('ff_token', token);
+  }
+
+  function clearToken(){
+    localStorage.removeItem('ff_token');
+  }
+
+  const el = (id) => document.getElementById(id);
+
+  function show(id){ el(id).classList.remove('hidden'); }
+  function hide(id){ el(id).classList.add('hidden'); }
+
+  async function api(path, opts){
+    const res = await fetch(path, opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Eroare necunoscută');
+    return data;
+  }
+
+  let currentToken = getToken();
+  let myName = '';
+
+  async function init(){
+    hide('loading');
+    if (!currentToken) {
+      show('register-screen');
+      return;
+    }
+    try {
+      const me = await api(`${API.me}?token=${encodeURIComponent(currentToken)}`);
+      myName = me.name;
+      show('main-screen');
+      await loadMatch();
+    } catch (e) {
+      // token invalid — reinregistrare
+      clearToken();
+      currentToken = null;
+      show('register-screen');
+    }
+  }
+
+  async function loadMatch(){
+    const data = await api(`${API.current}?token=${encodeURIComponent(currentToken)}`);
+    renderMatch(data);
+  }
+
+  function renderMatch(data){
+    const m = data.match;
+    el('match-date').textContent = formatDateRo(m.date);
+    el('match-time-loc').textContent = `${m.time} • ${m.location}`;
+    el('match-count').textContent = `${data.confirmedCount} / ${m.capacity} confirmați` + (data.waitlist.length ? ` • ${data.waitlist.length} pe lista de rezervă` : '');
+    const pct = m.capacity > 0 ? Math.min(100, Math.round((data.confirmedCount / m.capacity) * 100)) : 0;
+    el('match-progress-bar').style.width = pct + '%';
+
+    const pill = el('match-status-pill');
+    pill.className = 'status-pill';
+    if (data.myStatus === 'confirmed') { pill.textContent = 'Ești confirmat ✅'; pill.classList.add('status-confirmed'); }
+    else if (data.myStatus === 'waitlist') { pill.textContent = 'Ești pe lista de rezervă ⏳'; pill.classList.add('status-waitlist'); }
+    else { pill.textContent = 'Nu ești încă înscris'; pill.classList.add('status-none'); }
+
+    el('confirmed-list').innerHTML = data.confirmed.map((p, i) => `<li><span class="num">${i+1}.</span><span>${escapeHtml(p.name)}</span></li>`).join('');
+    el('confirmed-empty').classList.toggle('hidden', data.confirmed.length > 0);
+
+    const waitlistWrap = el('waitlist-wrap');
+    if (data.waitlist.length) {
+      waitlistWrap.classList.remove('hidden');
+      el('waitlist-list').innerHTML = data.waitlist.map((p, i) => `<li><span class="num">${i+1}.</span><span>${escapeHtml(p.name)}</span></li>`).join('');
+    } else {
+      waitlistWrap.classList.add('hidden');
+    }
+
+    const cancelled = m.status === 'cancelled';
+    el('cancelled-banner').classList.toggle('hidden', !cancelled);
+    el('btn-join').classList.toggle('hidden', cancelled || data.myStatus !== 'none');
+    el('btn-leave').classList.toggle('hidden', cancelled || data.myStatus === 'none');
+
+    el('me-name').textContent = `Ești conectat ca ${myName}`;
+    hide('rsvp-error');
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  el('reg-submit').addEventListener('click', async () => {
+    const name = el('reg-name').value.trim();
+    const phone = el('reg-phone').value.trim();
+    hide('reg-error');
+    if (!name || !phone) {
+      el('reg-error').textContent = 'Te rugăm completează numele și telefonul.';
+      show('reg-error');
+      return;
+    }
+    try {
+      const data = await api(API.register, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name, phone}),
+      });
+      setToken(data.token);
+      currentToken = data.token;
+      myName = data.name;
+      hide('register-screen');
+      show('main-screen');
+      await loadMatch();
+    } catch (e) {
+      el('reg-error').textContent = e.message;
+      show('reg-error');
+    }
+  });
+
+  el('btn-join').addEventListener('click', () => doRsvp('join'));
+  el('btn-leave').addEventListener('click', () => doRsvp('leave'));
+
+  async function doRsvp(action){
+    try {
+      const data = await api(API.rsvp, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token: currentToken, action}),
+      });
+      renderMatch(data);
+    } catch (e) {
+      el('rsvp-error').textContent = e.message;
+      show('rsvp-error');
+    }
+  }
+
+  el('not-me-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    clearToken();
+    window.location.reload();
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "vineri-fotbal",
+  "version": "1.0.0",
+  "description": "Aplicatie pentru organizarea meciurilor de fotbal de vineri seara la O'Hanlon Park, Celbridge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

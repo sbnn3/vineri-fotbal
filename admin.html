@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Fotbal Vineri</title>
+<style>
+  body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#f4f6f5; color:#1c2620; margin:0; }
+  .wrap{ max-width:480px; margin:0 auto; padding:24px 16px 60px; }
+  h1{ font-size:20px; }
+  .card{ background:#fff; border:1px solid #e3e8e5; border-radius:14px; padding:20px; margin-top:16px; }
+  label{ display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
+  input, select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid #e3e8e5; font-size:15px; }
+  button{ font-size:15px; font-weight:700; border:none; border-radius:10px; padding:12px 16px; margin-top:16px; width:100%; background:#1f8a4c; color:#fff; cursor:pointer; }
+  .muted{ color:#6b7770; font-size:13px; }
+  .msg{ margin-top:12px; font-size:14px; }
+  ul{ padding-left:18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔑 Panou admin — Fotbal Vineri</h1>
+  <div class="card">
+    <label for="key">Cheie admin</label>
+    <input type="password" id="key" placeholder="Cheia setată în ADMIN_KEY">
+    <button id="load">Încarcă meciul curent</button>
+    <p class="muted">Cheia se setează la pornirea serverului (variabila de mediu <code>ADMIN_KEY</code>). Nu o distribui în grup.</p>
+  </div>
+
+  <div class="card" id="edit-card" style="display:none;">
+    <h2 id="m-date"></h2>
+    <p class="muted" id="m-summary"></p>
+    <label for="capacity">Capacitate (nr. locuri)</label>
+    <input type="number" id="capacity" min="0">
+    <label for="time">Ora</label>
+    <input type="text" id="time" placeholder="19:00">
+    <label for="location">Locație</label>
+    <input type="text" id="location">
+    <label for="status">Status meci</label>
+    <select id="status">
+      <option value="open">Deschis</option>
+      <option value="cancelled">Anulat</option>
+    </select>
+    <button id="save">Salvează</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+<script>
+  const el = (id) => document.getElementById(id);
+  let currentKey = '';
+
+  async function load(){
+    currentKey = el('key').value.trim();
+    const res = await fetch('/api/admin/match?key=' + encodeURIComponent(currentKey));
+    const data = await res.json();
+    if (!res.ok) { el('msg').textContent = data.error || 'Eroare'; return; }
+    el('edit-card').style.display = 'block';
+    el('m-date').textContent = data.match.date;
+    el('m-summary').textContent = `${data.confirmedCount}/${data.match.capacity} confirmați, ${data.waitlist.length} pe rezervă`;
+    el('capacity').value = data.match.capacity;
+    el('time').value = data.match.time;
+    el('location').value = data.match.location;
+    el('status').value = data.match.status;
+  }
+
+  async function save(){
+    const body = {
+      key: currentKey,
+      capacity: el('capacity').value,
+      time: el('time').value,
+      location: el('location').value,
+      status: el('status').value,
+    };
+    const res = await fetch('/api/admin/match', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    el('msg').textContent = res.ok ? 'Salvat ✅' : (data.error || 'Eroare');
+    if (res.ok) load();
+  }
+
+  el('load').addEventListener('click', load);
+  el('save').addEventListener('click', save);
+</script>
+</body>
+</html>
