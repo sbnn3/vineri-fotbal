@@ -425,6 +425,23 @@
     border:1px solid var(--card-border);
   }
   .btn-maps:active{ transform:translateY(1px); }
+  .btn-outline{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding:13px 16px;
+    margin-top:14px;
+    border-radius:12px;
+    background:rgba(255,255,255,0.06);
+    color:#fff;
+    font-weight:700;
+    font-size:14.5px;
+    text-decoration:none;
+    border:1px solid var(--card-border);
+  }
+  .btn-outline:active{ transform:translateY(1px); }
   .hidden{ display:none !important; }
   .spinner{
     text-align:center;
@@ -615,6 +632,7 @@
       <div class="match-meta">
         <span id="match-time">🕖 —</span>
         <span id="match-loc">📍 —</span>
+        <span id="match-weather" class="hidden">🌡️ —</span>
       </div>
       <div id="match-status-pill"></div>
 
@@ -628,11 +646,13 @@
 
       <button class="btn-primary hidden" id="btn-join">Particip ⚽</button>
       <button class="btn-leave hidden" id="btn-leave">Nu mai particip</button>
+      <a href="/calendar.ics" id="btn-calendar" class="btn-outline">📅 Adaugă în calendar</a>
 
       <div id="rsvp-error" class="error-box hidden"></div>
 
       <div id="payment-box" class="payment-box hidden">
         <div class="ptitle">💳 Achitare teren — <span id="pay-price">5€</span> / jucător</div>
+        <p class="pnote" id="pay-total-note" style="margin:2px 0 0;"></p>
 
         <div id="payment-choice" class="payment-choice hidden">
           <button id="btn-choose-revolut" class="pay-option pay-option-revolut">💙 Plătesc cu Revolut, acum</button>
@@ -685,7 +705,18 @@
     current: '/api/match/current',
     rsvp: '/api/rsvp',
     payment: '/api/payment',
+    weather: '/api/weather',
   };
+
+  function formatEuro(n){
+    if (n == null) return '—';
+    return Number.isInteger(n) ? `${n}€` : `${n}€`.replace('.', ',');
+  }
+  function formatHours(h){
+    if (h == null) return '';
+    if (h === 1) return '1 oră';
+    return Number.isInteger(h) ? `${h} ore` : `${String(h).replace('.', ',')} ore`;
+  }
 
   const ZILE = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
   const LUNI = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','nov','dec'];
@@ -743,6 +774,22 @@
   async function loadMatch(){
     const data = await api(`${API.current}?token=${encodeURIComponent(currentToken)}`);
     renderMatch(data);
+    loadWeather(); // separat, ca sa nu blocam ecranul principal daca vremea e lenta/indisponibila
+  }
+
+  async function loadWeather(){
+    try {
+      const data = await api(API.weather);
+      if (data.weather) {
+        const rainText = data.weather.rain != null ? ` · ${data.weather.rain}% ploaie` : '';
+        el('match-weather').textContent = `${data.weather.emoji} ${data.weather.temp}°C${rainText}`;
+        show('match-weather');
+      } else {
+        hide('match-weather');
+      }
+    } catch (e) {
+      hide('match-weather');
+    }
   }
 
   function renderTicks(confirmedCount, waitlistCount, capacity){
@@ -792,15 +839,17 @@
     el('cancelled-banner').classList.toggle('hidden', !cancelled);
     el('btn-join').classList.toggle('hidden', cancelled || data.myStatus !== 'none');
     el('btn-leave').classList.toggle('hidden', cancelled || data.myStatus === 'none');
+    el('btn-calendar').classList.toggle('hidden', cancelled);
 
     const showPayment = !cancelled && data.myStatus === 'confirmed';
     el('payment-box').classList.toggle('hidden', !showPayment);
-    if (showPayment) {
-      const price = m.price != null ? m.price : 5;
-      const priceText = Number.isInteger(price) ? `${price}€` : `${price}€`.replace('.', ',');
+    if (showPayment && data.pricing) {
+      const priceText = formatEuro(data.pricing.perPlayer);
       el('pay-price').textContent = priceText;
       el('pay-price-2').textContent = priceText;
       el('btn-revolut').href = `https://revolut.me/${encodeURIComponent(m.revtag || 'sbnn3')}`;
+      el('pay-total-note').textContent =
+        `Cost total teren: ${formatEuro(data.pricing.totalCost)} / ${formatHours(data.pricing.hours)}, la ${data.confirmedCount} jucători.`;
 
       const myPayment = data.myPayment || null;
       el('payment-choice').classList.toggle('hidden', myPayment !== null);

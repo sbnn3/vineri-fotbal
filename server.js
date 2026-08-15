@@ -34,8 +34,15 @@ const DEFAULT_CONFIG = {
   location: "O'Hanlon Park, Celbridge",
   time: '19:00',
   defaultCapacity: 15,
-  price: 5,
   revtag: 'sbnn3',
+  lat: 53.3399,
+  lon: -6.5406,
+  // Costul terenului nu e fix per jucator — depinde de cati vin (se imparte in echipe de 5).
+  // Se alege automat pragul cu cei mai multi jucatori care e <= numarul de confirmati.
+  priceTiers: [
+    { minPlayers: 15, totalCost: 70, hours: 2 },   // 3 echipe x 5, 2 ore
+    { minPlayers: 10, totalCost: 50, hours: 1.5 }, // 2 echipe x 5, 1.5 ore
+  ],
 };
 
 // ---------- Persistenta ----------
@@ -134,6 +141,154 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/[^\d+]/g, '');
 }
 
+// ---------- Vremea (Open-Meteo, fara cheie API) ----------
+
+const WEATHER_CODES = {
+  0: { emoji: '☀️', text: 'Cer senin' },
+  1: { emoji: '🌤️', text: 'Predominant senin' },
+  2: { emoji: '⛅', text: 'Parțial noros' },
+  3: { emoji: '☁️', text: 'Înnorat' },
+  45: { emoji: '🌫️', text: 'Ceață' },
+  48: { emoji: '🌫️', text: 'Ceață' },
+  51: { emoji: '🌦️', text: 'Burniță ușoară' },
+  53: { emoji: '🌦️', text: 'Burniță' },
+  55: { emoji: '🌧️', text: 'Burniță densă' },
+  61: { emoji: '🌦️', text: 'Ploaie ușoară' },
+  63: { emoji: '🌧️', text: 'Ploaie' },
+  65: { emoji: '🌧️', text: 'Ploaie puternică' },
+  71: { emoji: '🌨️', text: 'Ninsoare ușoară' },
+  73: { emoji: '🌨️', text: 'Ninsoare' },
+  75: { emoji: '❄️', text: 'Ninsoare puternică' },
+  80: { emoji: '🌦️', text: 'Averse ușoare' },
+  81: { emoji: '🌧️', text: 'Averse' },
+  82: { emoji: '⛈️', text: 'Averse puternice' },
+  95: { emoji: '⛈️', text: 'Furtună' },
+  96: { emoji: '⛈️', text: 'Furtună cu grindină' },
+  99: { emoji: '⛈️', text: 'Furtună puternică' },
+};
+
+const weatherCache = new Map(); // "lat,lon,data" -> { at, json }
+const WEATHER_CACHE_TTL = 30 * 60 * 1000;
+
+async function fetchWeatherJSON(lat, lon, dateISO) {
+  const cacheKey = `${lat},${lon},${dateISO}`;
+  const cached = weatherCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < WEATHER_CACHE_TTL) return cached.json;
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability,weathercode&timezone=Europe%2FDublin&start_date=${dateISO}&end_date=${dateISO}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Vremea indisponibila: ' + res.status);
+  const json = await res.json();
+  weatherCache.set(cacheKey, { at: Date.now(), json });
+  return json;
+}
+
+function pickHourlyWeather(json, dateISO, time) {
+  if (!json || !json.hourly || !Array.isArray(json.hourly.time)) return null;
+  const hour = (time || '19:00').slice(0, 2).padStart(2, '0');
+  const targetKey = `${dateISO}T${hour}:00`;
+  let idx = json.hourly.time.indexOf(targetKey);
+  if (idx === -1) idx = json.hourly.time.findIndex((t) => t.startsWith(dateISO));
+  if (idx === -1) return null;
+  const code = json.hourly.weathercode ? json.hourly.weathercode[idx] : undefined;
+  const info = WEATHER_CODES[code] || { emoji: '🌡️', text: '—' };
+  const rainArr = json.hourly.precipitation_probability;
+  return {
+    temp: Math.round(json.hourly.temperature_2m[idx]),
+    rain: rainArr ? rainArr[idx] : null,
+    emoji: info.emoji,
+    text: info.text,
+  };
+}
+
+// ---------- Pretul terenului (praguri in functie de cati confirma) ----------
+
+function computePricing(tiers, confirmedCount) {
+  const list = (Array.isArray(tiers) && tiers.length ? tiers : DEFAULT_CONFIG.priceTiers)
+    .slice()
+    .sort((a, b) => b.minPlayers - a.minPlayers);
+  if (!list.length) return null;
+  const tier = list.find((t) => confirmedCount >= t.minPlayers) || list[list.length - 1];
+  const denom = Math.max(confirmedCount, 1);
+  // rotunjim in sus la 0.5€ per jucator, ca suma stransa sa acopere tot costul terenului
+  const perPlayer = Math.ceil((tier.totalCost / denom) * 2) / 2;
+  return { totalCost: tier.totalCost, hours: tier.hours, minPlayers: tier.minPlayers, perPlayer };
+}
+
+// ---------- Calendar (.ics) ----------
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+// Irlanda: ora de vara (UTC+1) din ultima duminica din martie pana in ultima duminica din octombrie (UTC+0 iarna).
+function irishDstOffsetHours(dateUTC) {
+  const year = dateUTC.getUTCFullYear();
+  function lastSundayAt1UTC(monthIndex) {
+    const d = new Date(Date.UTC(year, monthIndex + 1, 0, 1, 0, 0)); // ultima zi a lunii, 01:00 UTC
+    d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+    return d;
+  }
+  const dstStart = lastSundayAt1UTC(2); // martie
+  const dstEnd = lastSundayAt1UTC(9); // octombrie
+  return (dateUTC >= dstStart && dateUTC < dstEnd) ? 1 : 0;
+}
+
+function matchStartUTC(match) {
+  const [y, m, d] = match.date.split('-').map(Number);
+  const [hh, mm] = String(match.time || '19:00').split(':').map(Number);
+  const naiveUTC = new Date(Date.UTC(y, m - 1, d, hh || 0, mm || 0, 0));
+  const offset = irishDstOffsetHours(naiveUTC);
+  return new Date(naiveUTC.getTime() - offset * 3600000);
+}
+
+function icsDate(d) {
+  return `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}00Z`;
+}
+
+function escapeICS(s) {
+  return String(s || '').replace(/([,;])/g, '\\$1');
+}
+
+function buildICS(match, pricing) {
+  const start = matchStartUTC(match);
+  const hours = (pricing && pricing.hours) || 1.5;
+  const end = new Date(start.getTime() + hours * 3600000);
+
+  // Reminder de dimineata (09:00 ora Irlandei) in ziua meciului.
+  const morningNaiveUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate(), 9, 0, 0));
+  const morningOffset = irishDstOffsetHours(morningNaiveUTC);
+  const morningUTC = new Date(morningNaiveUTC.getTime() - morningOffset * 3600000);
+
+  const uid = `match-${match.id}@vineri-fotbal.onrender.com`;
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Vineri Fotbal//RO',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${icsDate(new Date())}`,
+    `DTSTART:${icsDate(start)}`,
+    `DTEND:${icsDate(end)}`,
+    'SUMMARY:⚽ Fotbal Vineri',
+    `LOCATION:${escapeICS(match.location)}`,
+    'DESCRIPTION:Fotbal de vineri seara! Confirma prezenta pe https://vineri-fotbal.onrender.com',
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Fotbal in 2 ore!',
+    'TRIGGER:-PT2H',
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Fotbal deseara — nu uita sa confirmi prezenta!',
+    `TRIGGER;VALUE=DATE-TIME:${icsDate(morningUTC)}`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+    '',
+  ];
+  return lines.join('\r\n');
+}
+
 // ---------- Logica de business ----------
 
 async function getOrCreateCurrentMatch(data) {
@@ -146,17 +301,24 @@ async function getOrCreateCurrentMatch(data) {
       time: data.config.time,
       location: data.config.location,
       capacity: data.config.defaultCapacity,
-      price: data.config.price,
       revtag: data.config.revtag,
+      lat: data.config.lat,
+      lon: data.config.lon,
+      priceTiers: (data.config.priceTiers || DEFAULT_CONFIG.priceTiers).map((t) => Object.assign({}, t)),
       status: 'open', // open | cancelled
       createdAt: new Date().toISOString(),
     };
     data.matches.push(match);
     await persist(data);
   }
-  // meciuri create inainte de a exista pret/revtag: completeaza cu valorile curente din config
-  if (match.price === undefined) match.price = data.config.price;
+  // meciuri create inainte de a exista aceste campuri: completeaza cu valorile curente din config
   if (match.revtag === undefined) match.revtag = data.config.revtag;
+  if (match.lat === undefined) match.lat = data.config.lat !== undefined ? data.config.lat : DEFAULT_CONFIG.lat;
+  if (match.lon === undefined) match.lon = data.config.lon !== undefined ? data.config.lon : DEFAULT_CONFIG.lon;
+  if (!match.priceTiers || !match.priceTiers.length) {
+    match.priceTiers = (data.config.priceTiers || DEFAULT_CONFIG.priceTiers).map((t) => Object.assign({}, t));
+  }
+  delete match.price; // camp vechi, inlocuit de priceTiers
   return match;
 }
 
@@ -188,10 +350,13 @@ function matchView(data, match, token) {
       time: match.time,
       location: match.location,
       capacity: match.capacity,
-      price: match.price,
       revtag: match.revtag,
+      priceTiers: match.priceTiers,
+      lat: match.lat,
+      lon: match.lon,
       status: match.status,
     },
+    pricing: computePricing(match.priceTiers, confirmed.length),
     myStatus,
     myPayment,
     confirmed,
@@ -409,9 +574,22 @@ const server = http.createServer(async (req, res) => {
       if (body.capacity !== undefined) match.capacity = Math.max(0, parseInt(body.capacity, 10) || 0);
       if (body.time) match.time = String(body.time);
       if (body.location) match.location = String(body.location);
-      if (body.price !== undefined) match.price = Math.max(0, Number(body.price) || 0);
       if (body.revtag) match.revtag = String(body.revtag).trim().replace(/^@/, '');
       if (body.status && ['open', 'cancelled'].includes(body.status)) match.status = body.status;
+      if (body.lat !== undefined && body.lat !== '' && !Number.isNaN(Number(body.lat))) match.lat = Number(body.lat);
+      if (body.lon !== undefined && body.lon !== '' && !Number.isNaN(Number(body.lon))) match.lon = Number(body.lon);
+      if (body.priceTiers !== undefined) {
+        if (!Array.isArray(body.priceTiers)) return sendJSON(res, 400, { error: 'Praguri de pret invalide.' });
+        const cleaned = body.priceTiers
+          .map((t) => ({
+            minPlayers: Math.max(0, parseInt(t.minPlayers, 10) || 0),
+            totalCost: Math.max(0, Number(t.totalCost) || 0),
+            hours: Math.max(0, Number(t.hours) || 0),
+          }))
+          .filter((t) => t.minPlayers > 0 && t.totalCost > 0)
+          .sort((a, b) => b.minPlayers - a.minPlayers);
+        if (cleaned.length) match.priceTiers = cleaned;
+      }
 
       // promoveaza din lista de rezerva daca s-a marit capacitatea
       const confirmedCount = data.rsvps.filter((r) => r.matchId === match.id && r.status === 'confirmed').length;
@@ -429,6 +607,34 @@ const server = http.createServer(async (req, res) => {
 
       await persist(data);
       return sendJSON(res, 200, matchView(data, match, null));
+    }
+
+    // ---- API: vremea pentru meciul curent (Open-Meteo, fara cheie) ----
+    if (pathname === '/api/weather' && req.method === 'GET') {
+      const data = getData();
+      const match = await getOrCreateCurrentMatch(data);
+      try {
+        const json = await fetchWeatherJSON(match.lat, match.lon, match.date);
+        const weather = pickHourlyWeather(json, match.date, match.time);
+        return sendJSON(res, 200, { weather });
+      } catch (e) {
+        console.error('Vremea indisponibila:', e.message);
+        return sendJSON(res, 200, { weather: null });
+      }
+    }
+
+    // ---- Fisier .ics pentru "Adauga in calendar" (cu reminder dimineata + cu 2 ore inainte) ----
+    if (pathname === '/calendar.ics' && req.method === 'GET') {
+      const data = getData();
+      const match = await getOrCreateCurrentMatch(data);
+      const confirmedCount = data.rsvps.filter((r) => r.matchId === match.id && r.status === 'confirmed').length;
+      const pricing = computePricing(match.priceTiers, confirmedCount);
+      const ics = buildICS(match, pricing);
+      res.writeHead(200, {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="fotbal-vineri.ics"',
+      });
+      return res.end(ics);
     }
 
     // ---- Fisiere statice (frontend) ----

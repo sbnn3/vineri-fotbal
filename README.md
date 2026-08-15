@@ -72,11 +72,16 @@ Dacă ai deja (sau vrei) un server mic (Raspberry Pi, VPS de câțiva euro), apl
 3. De atunci încolo, dacă deschide același link (sau îl salvează pe ecranul principal al telefonului ca o „aplicație”), vede direct meciul de vinerea curentă și poate apăsa „Particip”.
 4. Dacă cineva schimbă telefonul sau șterge datele browserului, poate „recupera” contul introducând din nou același număr de telefon — nu se creează un jucător duplicat.
 
+## Funcționalități adăugate
+
+- **Vremea pentru ziua meciului** — afișată automat lângă oră/locație (temperatură + șansă de ploaie), preluată gratuit de la [Open-Meteo](https://open-meteo.com), fără cheie API. Coordonatele terenului se pot ajusta din `/admin` dacă se schimbă vreodată locația.
+- **Cost teren pe praguri** — nu mai e un preț fix per jucător, ci praguri configurabile din `/admin` (implicit: 15 jucători → 70€ total / 2 ore; 10 jucători → 50€ total / 1,5 ore). Aplicația alege automat pragul potrivit numărului de confirmați și împarte costul, rotunjit în sus la 0,5€, ca suma strânsă să acopere tot terenul.
+- **Adaugă în calendar** — buton pe ecranul principal care descarcă un fișier `.ics` cu meciul curent, cu două alarme incluse: una cu 2 ore înainte de meci și una dimineața zilei meciului (09:00).
+
 ## Idei pentru pași următori (dacă vrei să extinzi aplicația)
 
 - Notificare automată (ex. joi seara) către cei care nu au răspuns încă — necesită integrare cu WhatsApp Business API sau trimitere de SMS/email.
 - Istoric de prezență și un mic clasament („cine a jucat cel mai des”).
 - Generare automată a celor două echipe.
-- Split automat al costului terenului între cei prezenți.
 
 Spune-mi dacă vrei să construim oricare dintre acestea — structura de date (jucători, meciuri, prezențe) e deja pregătită să susțină toate ideile de mai sus.
