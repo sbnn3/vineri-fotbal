@@ -38,8 +38,11 @@ const DEFAULT_CONFIG = {
   revtag: 'sbnn3',
   lat: 53.3399,
   lon: -6.5406,
-  // Costul terenului nu e fix per jucator — depinde de cati vin (se imparte in echipe de 5).
-  // Se alege automat pragul cu cei mai multi jucatori care e <= numarul de confirmati.
+  // Pretul per jucator e FIX (nu se recalculeaza in functie de cati sunt confirmati acum in
+  // saptamana curenta — altfel ar arata sume ciudate cat timp lista se umple, ex. 17€ la 3
+  // confirmati). Doar durata meciului (si costul total, informativ) difera dupa cate praguri
+  // de jucatori se ating pana vineri.
+  pricePerPlayer: 5,
   priceTiers: [
     { minPlayers: 15, totalCost: 70, hours: 2 },   // 3 echipe x 5, 2 ore
     { minPlayers: 10, totalCost: 50, hours: 1.5 }, // 2 echipe x 5, 1.5 ore
@@ -218,17 +221,15 @@ function pickHourlyWeather(json, dateISO, time) {
   };
 }
 
-// ---------- Pretul terenului (praguri in functie de cati confirma) ----------
+// ---------- Pretul terenului (per jucator e FIX; doar ora/costul total difera pe praguri) ----------
 
-function computePricing(tiers, confirmedCount) {
+function computePricing(tiers, confirmedCount, pricePerPlayer) {
   const list = (Array.isArray(tiers) && tiers.length ? tiers : DEFAULT_CONFIG.priceTiers)
     .slice()
     .sort((a, b) => b.minPlayers - a.minPlayers);
   if (!list.length) return null;
   const tier = list.find((t) => confirmedCount >= t.minPlayers) || list[list.length - 1];
-  const denom = Math.max(confirmedCount, 1);
-  // rotunjim in sus la 0.5€ per jucator, ca suma stransa sa acopere tot costul terenului
-  const perPlayer = Math.ceil((tier.totalCost / denom) * 2) / 2;
+  const perPlayer = pricePerPlayer != null ? pricePerPlayer : DEFAULT_CONFIG.pricePerPlayer;
   return { totalCost: tier.totalCost, hours: tier.hours, minPlayers: tier.minPlayers, perPlayer };
 }
 
@@ -324,6 +325,7 @@ async function getOrCreateCurrentMatch(data) {
       lat: data.config.lat,
       lon: data.config.lon,
       priceTiers: (data.config.priceTiers || DEFAULT_CONFIG.priceTiers).map((t) => Object.assign({}, t)),
+      pricePerPlayer: data.config.pricePerPlayer != null ? data.config.pricePerPlayer : DEFAULT_CONFIG.pricePerPlayer,
       status: 'open', // open | cancelled
       createdAt: new Date().toISOString(),
     };
@@ -337,7 +339,10 @@ async function getOrCreateCurrentMatch(data) {
   if (!match.priceTiers || !match.priceTiers.length) {
     match.priceTiers = (data.config.priceTiers || DEFAULT_CONFIG.priceTiers).map((t) => Object.assign({}, t));
   }
-  delete match.price; // camp vechi, inlocuit de priceTiers
+  if (match.pricePerPlayer == null) {
+    match.pricePerPlayer = data.config.pricePerPlayer != null ? data.config.pricePerPlayer : DEFAULT_CONFIG.pricePerPlayer;
+  }
+  delete match.price; // camp vechi, inlocuit de priceTiers/pricePerPlayer
   return match;
 }
 
@@ -387,11 +392,12 @@ function matchView(data, match, token) {
       capacity: match.capacity,
       revtag: match.revtag,
       priceTiers: match.priceTiers,
+      pricePerPlayer: match.pricePerPlayer,
       lat: match.lat,
       lon: match.lon,
       status: match.status,
     },
-    pricing: computePricing(match.priceTiers, confirmed.length),
+    pricing: computePricing(match.priceTiers, confirmed.length, match.pricePerPlayer),
     isAdmin,
     myStatus,
     myPayment,
@@ -656,6 +662,9 @@ const server = http.createServer(async (req, res) => {
       if (body.status && ['open', 'cancelled'].includes(body.status)) match.status = body.status;
       if (body.lat !== undefined && body.lat !== '' && !Number.isNaN(Number(body.lat))) match.lat = Number(body.lat);
       if (body.lon !== undefined && body.lon !== '' && !Number.isNaN(Number(body.lon))) match.lon = Number(body.lon);
+      if (body.pricePerPlayer !== undefined && body.pricePerPlayer !== '' && !Number.isNaN(Number(body.pricePerPlayer))) {
+        match.pricePerPlayer = Math.max(0, Number(body.pricePerPlayer));
+      }
       if (body.priceTiers !== undefined) {
         if (!Array.isArray(body.priceTiers)) return sendJSON(res, 400, { error: 'Praguri de pret invalide.' });
         const cleaned = body.priceTiers
@@ -706,7 +715,7 @@ const server = http.createServer(async (req, res) => {
       const data = getData();
       const match = await getOrCreateCurrentMatch(data);
       const confirmedCount = data.rsvps.filter((r) => r.matchId === match.id && r.status === 'confirmed').length;
-      const pricing = computePricing(match.priceTiers, confirmedCount);
+      const pricing = computePricing(match.priceTiers, confirmedCount, match.pricePerPlayer);
       const ics = buildICS(match, pricing);
       res.writeHead(200, {
         'Content-Type': 'text/calendar; charset=utf-8',
