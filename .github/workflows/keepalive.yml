@@ -1,11 +1,14 @@
 name: Keep Render app awake
 
 # Suna periodic aplicatia ca planul gratuit Render sa nu o adoarma din
-# inactivitate (Render opreste serviciile fara trafic timp de 15 minute) -
-# la fiecare 10 minute ramanem sub acel prag, deci serverul ramane treaz.
+# inactivitate (Render opreste serviciile fara trafic timp de 15 minute).
+# La fiecare 5 minute (minimul permis de GitHub Actions pentru cron) avem
+# o marja mai mare fata de pragul de 15 minute, in cazul in care GitHub
+# intarzie ocazional rularea programata - repo-ul e public, deci minutele
+# de Actions sunt gratuite nelimitat, nu costa nimic in plus.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
