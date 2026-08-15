@@ -718,15 +718,23 @@
   }
   li.me .jersey{ box-shadow:0 0 0 2px var(--pitch-0), 0 0 0 4px var(--gold); }
   .pname{
-    flex:1;
+    flex:0 1 auto;
     min-width:0;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
   }
   li.me span.pname{ color:var(--gold); }
-  .pay-badge{
+  /* ---- Grup dreapta: icoane admin + status plata, mereu lipite intre ele, ancorate la marginea din dreapta ---- */
+  .prow-right{
+    display:flex;
+    align-items:center;
+    gap:6px;
     margin-left:auto;
+    padding-left:8px;
+    flex-shrink:0;
+  }
+  .pay-badge{
     flex-shrink:0;
     font-size:11.5px;
     font-weight:700;
@@ -739,7 +747,7 @@
   .pay-badge-cash.is-paid{ background:rgba(34,197,94,0.32); color:#a4f6c8; }
 
   /* ---- Controale admin (doar cei 3 recunoscuti dupa telefon) ---- */
-  .kick-btn, .call-btn, .pay-toggle{
+  .kick-btn, .block-btn, .call-btn, .pay-toggle{
     width:auto;
     margin-top:0;
     text-transform:none;
@@ -747,51 +755,37 @@
     font-family:inherit;
     cursor:pointer;
   }
-  .kick-btn{
+  /* icoanele de actiune (apel/blocare/kick) stau discrete, neutre, cat timp nu sunt "armate" —
+     doar cand admin apasa o data (arm) capata culoarea de avertisment, ca sa nu incarce vizual randul */
+  .kick-btn, .block-btn, .call-btn{
     flex-shrink:0;
-    width:24px; height:24px;
+    width:23px; height:23px;
     border-radius:50%;
-    background:rgba(240,71,63,0.14);
-    color:#ff8a83;
-    border:1px solid rgba(240,71,63,0.35);
+    background:rgba(255,255,255,0.05);
+    color:var(--muted);
+    border:1px solid rgba(255,255,255,0.12);
     display:flex; align-items:center; justify-content:center;
-    font-size:12px;
+    font-size:11.5px;
     font-weight:700;
     padding:0;
     line-height:1;
+    transition:background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
   }
+  .kick-btn:active, .block-btn:active, .call-btn:active{ transform:scale(0.92); }
   .kick-btn.armed{
     background:#f0473f;
     color:#fff;
+    border-color:#f0473f;
     box-shadow:0 0 0 3px rgba(240,71,63,0.25);
-  }
-  .block-btn{
-    flex-shrink:0;
-    width:24px; height:24px;
-    border-radius:50%;
-    background:rgba(242,169,59,0.14);
-    color:var(--amber);
-    border:1px solid rgba(242,169,59,0.4);
-    display:flex; align-items:center; justify-content:center;
-    font-size:12px;
-    font-weight:700;
-    padding:0;
-    line-height:1;
   }
   .block-btn.armed{
     background:var(--amber);
     color:#04150d;
+    border-color:var(--amber);
     box-shadow:0 0 0 3px rgba(242,169,59,0.3);
   }
   .call-btn{
-    flex-shrink:0;
-    width:24px; height:24px;
-    border-radius:50%;
-    background:rgba(34,197,94,0.14);
-    border:1px solid rgba(34,197,94,0.35);
-    display:flex; align-items:center; justify-content:center;
-    font-size:12px;
-    padding:0;
+    color:#7fe3a8;
     text-decoration:none;
   }
   .pay-toggle{ border:none; padding:4px 9px; }
@@ -1230,7 +1224,8 @@
 
   function squadRowHtml(p, i, benched, isMe){
     const jerseyClass = benched ? 'jersey bench' : 'jersey';
-    let adminBits = '';
+    // identitate: numarul + numele, lipite intre ele in stanga randului
+    const identity = `<span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>`;
     if (isAdminView && p.playerId) {
       const callBtn = p.phone
         ? `<a href="tel:${escapeHtml(p.phone)}" class="call-btn" title="Sună pe ${escapeHtml(p.name)}">📞</a>`
@@ -1244,10 +1239,12 @@
       const blockBtn = isSelf
         ? ''
         : `<button type="button" class="block-btn ${armedB ? 'armed' : ''}" data-pid="${p.playerId}" title="${armedB ? 'Apasă din nou ca să confirmi blocarea' : 'Blochează acest jucător (nu se mai poate înscrie)'}">${armedB ? '⚠' : '⊘'}</button>`;
-      adminBits = blockBtn + kickBtn + `<span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${callBtn}`;
-      return `<li class="${isMe ? 'me' : ''}">${adminBits}${paymentBadge(p)}</li>`;
+      // toate iconițele + eticheta de plată stau grupate, lipite, ancorate la marginea din dreapta —
+      // nu mai rămân "orfane" la distanță de nume, indiferent cât de scurt/lung e numele
+      const rightGroup = `<span class="prow-right">${callBtn}${blockBtn}${kickBtn}${paymentBadge(p)}</span>`;
+      return `<li class="${isMe ? 'me' : ''}">${identity}${rightGroup}</li>`;
     }
-    return `<li class="${isMe ? 'me' : ''}"><span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${paymentBadge(p)}</li>`;
+    return `<li class="${isMe ? 'me' : ''}">${identity}<span class="prow-right">${paymentBadge(p)}</span></li>`;
   }
 
   function celebrate(){
