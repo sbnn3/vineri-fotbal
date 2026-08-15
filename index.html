@@ -287,6 +287,54 @@
     padding:12px;
   }
 
+  /* ---- Modal confirmare retragere ---- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(4,21,13,0.72);
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:60;
+    padding:20px;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal-box{
+    background:var(--pitch-1);
+    border:1px solid var(--card-border);
+    border-radius:18px;
+    padding:26px 22px 22px;
+    max-width:360px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 20px 60px -18px rgba(0,0,0,0.65);
+  }
+  .modal-box p{
+    font-size:15px;
+    color:var(--white);
+    line-height:1.5;
+    margin:0 0 20px;
+  }
+  .modal-actions{
+    display:flex;
+    gap:10px;
+  }
+  .modal-actions button{
+    margin-top:0;
+    flex:1;
+  }
+  .modal-btn-no{
+    background:linear-gradient(135deg, var(--grass) 0%, var(--grass-2) 100%);
+    color:#04150d;
+  }
+  .modal-btn-yes{
+    background:rgba(240,71,63,0.14);
+    color:#ff8a83;
+    border:1px solid rgba(240,71,63,0.4);
+  }
+
   /* ---- Register form ---- */
   label{
     display:block;
@@ -788,6 +836,16 @@
 
 <div id="burst"></div>
 
+<div id="leave-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <p id="leave-modal-text">Ești sigur că nu mai dorești să participi la meciul din <b>vineri</b>?</p>
+    <div class="modal-actions">
+      <button type="button" id="leave-modal-yes" class="modal-btn-yes">Da</button>
+      <button type="button" id="leave-modal-no" class="modal-btn-no">Nu</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const API = {
@@ -813,11 +871,16 @@
 
   const ZILE = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
   const LUNI = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','nov','dec'];
+  const LUNI_FULL = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 
   function formatDateParts(iso){
     const [y,m,d] = iso.split('-').map(Number);
     const dt = new Date(Date.UTC(y, m-1, d));
     return { zi: ZILE[dt.getUTCDay()], text: `${d} ${LUNI[m-1]}` };
+  }
+  function formatFullDate(iso){
+    const [y,m,d] = iso.split('-').map(Number);
+    return `${d} ${LUNI_FULL[m-1]}`;
   }
 
   function getToken(){
@@ -1051,7 +1114,21 @@
   });
 
   el('btn-join').addEventListener('click', () => doRsvp('join'));
-  el('btn-leave').addEventListener('click', () => doRsvp('leave'));
+  el('btn-leave').addEventListener('click', openLeaveModal);
+
+  function openLeaveModal(){
+    const iso = lastMatchData && lastMatchData.match && lastMatchData.match.date;
+    const when = iso ? formatFullDate(iso) : 'vineri';
+    el('leave-modal-text').innerHTML = `Ești sigur că nu mai dorești să participi la meciul din <b>${when}</b>?`;
+    show('leave-modal');
+  }
+  function closeLeaveModal(){ hide('leave-modal'); }
+
+  el('leave-modal-no').addEventListener('click', closeLeaveModal);
+  el('leave-modal-yes').addEventListener('click', () => {
+    closeLeaveModal();
+    doRsvp('leave');
+  });
 
   async function doRsvp(action){
     try {
