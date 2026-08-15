@@ -222,13 +222,16 @@ function pickHourlyWeather(json, dateISO, time) {
 }
 
 // ---------- Pretul terenului (per jucator e FIX; doar ora/costul total difera pe praguri) ----------
-
-function computePricing(tiers, confirmedCount, pricePerPlayer) {
+// Pragul (10 sau 15 jucatori) se alege dupa CAPACITATEA meciului setata din admin pentru
+// saptamana respectiva (cati jucatori s-a decis ca se joaca), NU dupa cati s-au confirmat pana
+// acum — altfel ar arata info gresita cat timp lista se umple (ex. sondaj deschis pentru 15,
+// dar cu doar 3 confirmati ar aparea starea "10 jucatori").
+function computePricing(tiers, capacity, pricePerPlayer) {
   const list = (Array.isArray(tiers) && tiers.length ? tiers : DEFAULT_CONFIG.priceTiers)
     .slice()
     .sort((a, b) => b.minPlayers - a.minPlayers);
   if (!list.length) return null;
-  const tier = list.find((t) => confirmedCount >= t.minPlayers) || list[list.length - 1];
+  const tier = list.find((t) => capacity >= t.minPlayers) || list[list.length - 1];
   const perPlayer = pricePerPlayer != null ? pricePerPlayer : DEFAULT_CONFIG.pricePerPlayer;
   return { totalCost: tier.totalCost, hours: tier.hours, minPlayers: tier.minPlayers, perPlayer };
 }
@@ -397,7 +400,7 @@ function matchView(data, match, token) {
       lon: match.lon,
       status: match.status,
     },
-    pricing: computePricing(match.priceTiers, confirmed.length, match.pricePerPlayer),
+    pricing: computePricing(match.priceTiers, match.capacity, match.pricePerPlayer),
     isAdmin,
     myStatus,
     myPayment,
@@ -714,8 +717,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/calendar.ics' && req.method === 'GET') {
       const data = getData();
       const match = await getOrCreateCurrentMatch(data);
-      const confirmedCount = data.rsvps.filter((r) => r.matchId === match.id && r.status === 'confirmed').length;
-      const pricing = computePricing(match.priceTiers, confirmedCount, match.pricePerPlayer);
+      const pricing = computePricing(match.priceTiers, match.capacity, match.pricePerPlayer);
       const ics = buildICS(match, pricing);
       res.writeHead(200, {
         'Content-Type': 'text/calendar; charset=utf-8',
