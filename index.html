@@ -4,6 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Vineri - Seară de Fotbal ⚽</title>
+<meta name="description" content="Confirmă prezența la fotbalul de vineri seara cu un singur click. Vezi cine mai vine, vremea și cum ajungi la teren.">
+
+<!-- Open Graph — cardul care apare cand linkul e trimis pe WhatsApp / Facebook / etc. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="⚽ Vineri - Seară de Fotbal">
+<meta property="og:description" content="Confirmă prezența la fotbalul de vineri seara cu un singur click. Vezi cine mai vine, vremea și cum ajungi la teren.">
+<meta property="og:image" content="https://vineri-fotbal.onrender.com/social-card.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://vineri-fotbal.onrender.com/">
+<meta property="og:locale" content="ro_RO">
+
+<!-- Twitter/X foloseste tot og:image daca nu gaseste twitter:image, dar il punem explicit -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="⚽ Vineri - Seară de Fotbal">
+<meta name="twitter:description" content="Confirmă prezența la fotbalul de vineri seara cu un singur click.">
+<meta name="twitter:image" content="https://vineri-fotbal.onrender.com/social-card.jpg">
+
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -646,7 +664,7 @@
 
       <button class="btn-primary hidden" id="btn-join">Particip ⚽</button>
       <button class="btn-leave hidden" id="btn-leave">Nu mai particip</button>
-      <a href="/calendar.ics" id="btn-calendar" class="btn-outline">📅 Adaugă în calendar</a>
+      <a href="/calendar.ics" id="btn-calendar" class="btn-outline hidden">📅 Adaugă în calendar</a>
 
       <div id="rsvp-error" class="error-box hidden"></div>
 
@@ -839,7 +857,8 @@
     el('cancelled-banner').classList.toggle('hidden', !cancelled);
     el('btn-join').classList.toggle('hidden', cancelled || data.myStatus !== 'none');
     el('btn-leave').classList.toggle('hidden', cancelled || data.myStatus === 'none');
-    el('btn-calendar').classList.toggle('hidden', cancelled);
+    // "Adaugă în calendar" apare abia dupa ce apasa Particip (confirmat sau pe rezerva)
+    el('btn-calendar').classList.toggle('hidden', cancelled || data.myStatus === 'none');
 
     const showPayment = !cancelled && data.myStatus === 'confirmed';
     el('payment-box').classList.toggle('hidden', !showPayment);

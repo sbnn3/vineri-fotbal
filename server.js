@@ -28,6 +28,7 @@ const STATIC_FILES = {
   '/index.html': 'index.html',
   '/admin': 'admin.html',
   '/admin.html': 'admin.html',
+  '/social-card.jpg': 'social-card.jpg',
 };
 
 const DEFAULT_CONFIG = {
@@ -271,6 +272,8 @@ function buildICS(match, pricing) {
     `DTEND:${icsDate(end)}`,
     'SUMMARY:⚽ Fotbal Vineri',
     `LOCATION:${escapeICS(match.location)}`,
+    `GEO:${match.lat};${match.lon}`,
+    `X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=${escapeICS(match.location)};X-APPLE-RADIUS=100;X-TITLE=${escapeICS(match.location)}:geo:${match.lat},${match.lon}`,
     'DESCRIPTION:Fotbal de vineri seara! Confirma prezenta pe https://vineri-fotbal.onrender.com',
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
@@ -385,6 +388,8 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
   '.ico': 'image/x-icon',
 };
 
