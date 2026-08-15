@@ -93,17 +93,29 @@
   }
   .badge-line::after{ transform: scaleX(-1); }
   header.top h1{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:0.22em;
     font-family:'Bebas Neue',sans-serif;
     font-weight:400;
     font-size:clamp(30px, 9vw, 44px);
     letter-spacing:.04em;
     margin:0;
     line-height:1.05;
+  }
+  header.top h1 .title-text{
     background:linear-gradient(180deg, #ffffff 10%, #cdeedb 100%);
     -webkit-background-clip:text;
     background-clip:text;
     color:transparent;
     text-shadow:0 0 34px var(--grass-glow);
+  }
+  header.top h1 .ball-icon{
+    width:0.82em;
+    height:0.82em;
+    flex-shrink:0;
+    filter:drop-shadow(0 0 10px var(--grass-glow));
   }
   header.top p{
     margin:6px 0 0;
@@ -665,7 +677,24 @@
 <div class="wrap">
   <header class="top">
     <div class="badge-line">Grup privat</div>
-    <h1>Vineri - Seară de Fotbal ⚽</h1>
+    <h1><span class="title-text">Vineri - Seară de Fotbal</span><svg class="ball-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#111111" stroke-width="4"/>
+      <polygon points="50,34 65.22,45.06 59.41,62.94 40.59,62.94 34.78,45.06" fill="#111111"/>
+      <g stroke="#111111" stroke-width="3.5" stroke-linecap="round">
+        <line x1="50" y1="34" x2="50" y2="9"/>
+        <line x1="65.22" y1="45.06" x2="88.99" y2="37.33"/>
+        <line x1="59.41" y1="62.94" x2="74.11" y2="83.17"/>
+        <line x1="40.59" y1="62.94" x2="25.89" y2="83.17"/>
+        <line x1="34.78" y1="45.06" x2="11.01" y2="37.33"/>
+      </g>
+      <g fill="#111111">
+        <circle cx="50" cy="9" r="3.4"/>
+        <circle cx="88.99" cy="37.33" r="3.4"/>
+        <circle cx="74.11" cy="83.17" r="3.4"/>
+        <circle cx="25.89" cy="83.17" r="3.4"/>
+        <circle cx="11.01" cy="37.33" r="3.4"/>
+      </g>
+    </svg></h1>
     <p>Celbridge Golf Range · Celbridge</p>
   </header>
 
