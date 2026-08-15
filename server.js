@@ -142,6 +142,22 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/[^\d+]/g, '');
 }
 
+// ---------- Admini recunoscuti dupa numarul de telefon (nu au nevoie de ADMIN_KEY) ----------
+// Cei 3 organizatori din grup: cand se inregistreaza/recupereaza contul cu unul din aceste
+// numere, primesc controale suplimentare direct pe ecranul principal (scoate jucator, suna,
+// marcheaza cash incasat). Poate fi schimbat fara redeploy prin variabila de mediu ADMIN_PHONES
+// (numere separate prin virgula).
+const DEFAULT_ADMIN_PHONES = ['0894394691', '0873876602', '0874681735'];
+const ADMIN_PHONES = new Set(
+  (process.env.ADMIN_PHONES ? process.env.ADMIN_PHONES.split(',') : DEFAULT_ADMIN_PHONES)
+    .map(normalizePhone)
+    .filter(Boolean)
+);
+
+function isAdminPhone(phone) {
+  return ADMIN_PHONES.has(normalizePhone(phone));
+}
+
 // ---------- Vremea (Open-Meteo, fara cheie API) ----------
 
 const WEATHER_CODES = {
@@ -327,14 +343,30 @@ async function getOrCreateCurrentMatch(data) {
 
 function matchView(data, match, token) {
   const rsvpsForMatch = data.rsvps.filter((r) => r.matchId === match.id && r.status !== 'cancelled');
+
+  const requester = token ? data.players.find((p) => p.id === token) : null;
+  const isAdmin = Boolean(requester && isAdminPhone(requester.phone));
+
+  const mapEntry = (r) => {
+    const p = data.players.find((pl) => pl.id === r.playerId);
+    const base = { name: p ? p.name : 'Jucator', payment: r.payment || null };
+    // numarul de telefon, id-ul jucatorului si statusul platii apar doar pentru cei 3 admini
+    if (isAdmin) {
+      base.playerId = r.playerId;
+      base.phone = p ? p.phone : null;
+      base.paid = Boolean(r.paid);
+    }
+    return base;
+  };
+
   const confirmed = rsvpsForMatch
     .filter((r) => r.status === 'confirmed')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((r) => ({ name: playerName(data, r.playerId), payment: r.payment || null }));
+    .map(mapEntry);
   const waitlist = rsvpsForMatch
     .filter((r) => r.status === 'waitlist')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((r) => ({ name: playerName(data, r.playerId), payment: r.payment || null }));
+    .map(mapEntry);
 
   let myStatus = 'none';
   let myPayment = null;
@@ -360,6 +392,7 @@ function matchView(data, match, token) {
       status: match.status,
     },
     pricing: computePricing(match.priceTiers, confirmed.length),
+    isAdmin,
     myStatus,
     myPayment,
     confirmed,
@@ -369,9 +402,20 @@ function matchView(data, match, token) {
   };
 }
 
-function playerName(data, playerId) {
-  const p = data.players.find((pl) => pl.id === playerId);
-  return p ? p.name : 'Jucator';
+// scoate un jucator din meciul curent si promoveaza primul de pe rezerva daca era confirmat
+// (folosit atat cand pleaca singur "Nu mai particip", cat si cand il scoate un admin)
+function cancelParticipant(data, match, playerId) {
+  const entry = data.rsvps.find((r) => r.matchId === match.id && r.playerId === playerId && r.status !== 'cancelled');
+  if (!entry) return false;
+  const wasConfirmed = entry.status === 'confirmed';
+  entry.status = 'cancelled';
+  if (wasConfirmed) {
+    const nextInLine = data.rsvps
+      .filter((r) => r.matchId === match.id && r.status === 'waitlist')
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+    if (nextInLine) nextInLine.status = 'confirmed';
+  }
+  return true;
 }
 
 function findPlayerByPhone(data, phone) {
@@ -501,6 +545,7 @@ const server = http.createServer(async (req, res) => {
             entry.status = newStatus;
             entry.createdAt = new Date().toISOString();
             entry.payment = null; // participare noua — alege din nou metoda de plata
+            entry.paid = false;
           } else {
             entry = {
               id: crypto.randomUUID(),
@@ -508,22 +553,14 @@ const server = http.createServer(async (req, res) => {
               playerId: token,
               status: newStatus,
               payment: null,
+              paid: false,
               createdAt: new Date().toISOString(),
             };
             data.rsvps.push(entry);
           }
         }
       } else if (action === 'leave') {
-        if (entry && entry.status !== 'cancelled') {
-          const wasConfirmed = entry.status === 'confirmed';
-          entry.status = 'cancelled';
-          if (wasConfirmed) {
-            const nextInLine = data.rsvps
-              .filter((r) => r.matchId === match.id && r.status === 'waitlist')
-              .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
-            if (nextInLine) nextInLine.status = 'confirmed';
-          }
-        }
+        cancelParticipant(data, match, token);
       }
 
       await persist(data);
@@ -547,6 +584,42 @@ const server = http.createServer(async (req, res) => {
       const entry = data.rsvps.find((r) => r.matchId === match.id && r.playerId === token && r.status !== 'cancelled');
       if (!entry) return sendJSON(res, 409, { error: 'Trebuie sa participi mai intai.' });
       entry.payment = method;
+      entry.paid = false; // metoda de plata s-a schimbat, resetam si starea de incasare
+
+      await persist(data);
+      return sendJSON(res, 200, matchView(data, match, token));
+    }
+
+    // ---- API: scoate un participant din meciul curent (doar cei 3 admini recunoscuti dupa telefon) ----
+    if (pathname === '/api/admin/kick' && req.method === 'POST') {
+      const body = await readBody(req);
+      const token = body.token;
+      const targetId = body.playerId;
+      if (!token || !targetId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
+      const data = getData();
+      const requester = data.players.find((p) => p.id === token);
+      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+
+      const match = await getOrCreateCurrentMatch(data);
+      cancelParticipant(data, match, targetId);
+      await persist(data);
+      return sendJSON(res, 200, matchView(data, match, token));
+    }
+
+    // ---- API: marcheaza plata cash ca incasata / neincasata (doar cei 3 admini recunoscuti dupa telefon) ----
+    if (pathname === '/api/admin/mark-paid' && req.method === 'POST') {
+      const body = await readBody(req);
+      const token = body.token;
+      const targetId = body.playerId;
+      if (!token || !targetId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
+      const data = getData();
+      const requester = data.players.find((p) => p.id === token);
+      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+
+      const match = await getOrCreateCurrentMatch(data);
+      const entry = data.rsvps.find((r) => r.matchId === match.id && r.playerId === targetId && r.status !== 'cancelled');
+      if (!entry) return sendJSON(res, 404, { error: 'Jucator negasit in meciul curent.' });
+      entry.paid = body.paid === true;
 
       await persist(data);
       return sendJSON(res, 200, matchView(data, match, token));

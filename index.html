@@ -544,6 +544,47 @@
   }
   .pay-badge-revolut{ background:rgba(6,102,235,0.18); color:#8ab4ff; }
   .pay-badge-cash{ background:rgba(34,197,94,0.16); color:#5eeba3; }
+  .pay-badge-cash.is-paid{ background:rgba(34,197,94,0.32); color:#a4f6c8; }
+
+  /* ---- Controale admin (doar cei 3 recunoscuti dupa telefon) ---- */
+  .kick-btn, .call-btn, .pay-toggle{
+    width:auto;
+    margin-top:0;
+    text-transform:none;
+    letter-spacing:normal;
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .kick-btn{
+    flex-shrink:0;
+    width:24px; height:24px;
+    border-radius:50%;
+    background:rgba(240,71,63,0.14);
+    color:#ff8a83;
+    border:1px solid rgba(240,71,63,0.35);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px;
+    font-weight:700;
+    padding:0;
+    line-height:1;
+  }
+  .kick-btn.armed{
+    background:#f0473f;
+    color:#fff;
+    box-shadow:0 0 0 3px rgba(240,71,63,0.25);
+  }
+  .call-btn{
+    flex-shrink:0;
+    width:24px; height:24px;
+    border-radius:50%;
+    background:rgba(34,197,94,0.14);
+    border:1px solid rgba(34,197,94,0.35);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px;
+    padding:0;
+    text-decoration:none;
+  }
+  .pay-toggle{ border:none; padding:4px 9px; }
   .empty{
     color:var(--muted);
     font-size:14px;
@@ -724,6 +765,8 @@
     rsvp: '/api/rsvp',
     payment: '/api/payment',
     weather: '/api/weather',
+    kick: '/api/admin/kick',
+    markPaid: '/api/admin/mark-paid',
   };
 
   function formatEuro(n){
@@ -773,6 +816,10 @@
   let currentToken = getToken();
   let myName = '';
   let lastMapLocation = null;
+  let lastMatchData = null;
+  let isAdminView = false;
+  let armedKick = null;
+  let armedKickTimer = null;
 
   async function init(){
     hide('loading');
@@ -821,6 +868,8 @@
   }
 
   function renderMatch(data){
+    lastMatchData = data;
+    isAdminView = Boolean(data.isAdmin);
     const m = data.match;
     const { zi, text } = formatDateParts(m.date);
     el('match-day').textContent = zi.toUpperCase();
@@ -839,7 +888,7 @@
     else { pill.innerHTML = 'Nu ești încă înscris'; pill.classList.add('status-none'); }
 
     el('confirmed-list').innerHTML = data.confirmed.map((p, i) =>
-      `<li class="${myName && p.name===myName && data.myStatus==='confirmed' ? 'me' : ''}"><span class="jersey">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${paymentBadge(p.payment)}</li>`
+      squadRowHtml(p, i, false, myName && p.name===myName && data.myStatus==='confirmed')
     ).join('');
     el('confirmed-empty').classList.toggle('hidden', data.confirmed.length > 0);
 
@@ -847,7 +896,7 @@
     if (data.waitlist.length) {
       waitlistWrap.classList.remove('hidden');
       el('waitlist-list').innerHTML = data.waitlist.map((p, i) =>
-        `<li class="${myName && p.name===myName && data.myStatus==='waitlist' ? 'me' : ''}"><span class="jersey bench">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${paymentBadge(p.payment)}</li>`
+        squadRowHtml(p, i, true, myName && p.name===myName && data.myStatus==='waitlist')
       ).join('');
     } else {
       waitlistWrap.classList.add('hidden');
@@ -894,10 +943,35 @@
     return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  function paymentBadge(payment){
-    if (payment === 'revolut') return '<span class="pay-badge pay-badge-revolut">💙 Revolut</span>';
-    if (payment === 'cash') return '<span class="pay-badge pay-badge-cash">💵 Cash</span>';
+  function paymentBadge(p){
+    if (p.payment === 'revolut') return '<span class="pay-badge pay-badge-revolut">💙 Revolut</span>';
+    if (p.payment === 'cash') {
+      // pentru cei 3 admini, insigna de cash devine buton — marcheaza incasarea cu un click
+      if (isAdminView && p.playerId) {
+        const paid = Boolean(p.paid);
+        return `<button type="button" class="pay-badge pay-badge-cash pay-toggle ${paid ? 'is-paid' : ''}" data-pid="${p.playerId}">${paid ? '✅ Încasat' : '💵 Cash'}</button>`;
+      }
+      return '<span class="pay-badge pay-badge-cash">💵 Cash</span>';
+    }
     return '';
+  }
+
+  function squadRowHtml(p, i, benched, isMe){
+    const jerseyClass = benched ? 'jersey bench' : 'jersey';
+    let adminBits = '';
+    if (isAdminView && p.playerId) {
+      const callBtn = p.phone
+        ? `<a href="tel:${escapeHtml(p.phone)}" class="call-btn" title="Sună pe ${escapeHtml(p.name)}">📞</a>`
+        : '';
+      const isSelf = p.playerId === currentToken;
+      const armed = armedKick === p.playerId;
+      const kickBtn = isSelf
+        ? ''
+        : `<button type="button" class="kick-btn ${armed ? 'armed' : ''}" data-pid="${p.playerId}" title="${armed ? 'Apasă din nou ca să confirmi' : 'Scoate din listă'}">${armed ? '⚠' : '✕'}</button>`;
+      adminBits = kickBtn + `<span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${callBtn}`;
+      return `<li class="${isMe ? 'me' : ''}">${adminBits}${paymentBadge(p)}</li>`;
+    }
+    return `<li class="${isMe ? 'me' : ''}"><span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${paymentBadge(p)}</li>`;
   }
 
   function celebrate(){
@@ -986,6 +1060,53 @@
   el('btn-choose-cash').addEventListener('click', () => setPayment('cash'));
   el('btn-change-revolut').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
   el('btn-change-cash').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
+
+  // ---- Controale admin (doar cei 3 recunoscuti dupa telefon): scoate din listă + marchează cash încasat ----
+  // Foloseste un tipar "apasă de 2 ori ca să confirmi" în loc de confirm() nativ, ca să nu blocheze pagina.
+  document.addEventListener('click', async (e) => {
+    const kickBtn = e.target.closest('.kick-btn');
+    if (kickBtn) {
+      const pid = kickBtn.dataset.pid;
+      if (armedKick !== pid) {
+        armedKick = pid;
+        clearTimeout(armedKickTimer);
+        armedKickTimer = setTimeout(() => { armedKick = null; if (lastMatchData) renderMatch(lastMatchData); }, 4000);
+        if (lastMatchData) renderMatch(lastMatchData);
+        return;
+      }
+      clearTimeout(armedKickTimer);
+      armedKick = null;
+      try {
+        const data = await api(API.kick, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ token: currentToken, playerId: pid }),
+        });
+        renderMatch(data);
+      } catch (err) {
+        el('rsvp-error').textContent = err.message;
+        show('rsvp-error');
+      }
+      return;
+    }
+
+    const payToggle = e.target.closest('.pay-toggle');
+    if (payToggle) {
+      const pid = payToggle.dataset.pid;
+      const nowPaid = !payToggle.classList.contains('is-paid');
+      try {
+        const data = await api(API.markPaid, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ token: currentToken, playerId: pid, paid: nowPaid }),
+        });
+        renderMatch(data);
+      } catch (err) {
+        el('rsvp-error').textContent = err.message;
+        show('rsvp-error');
+      }
+    }
+  });
 
   init();
 })();
