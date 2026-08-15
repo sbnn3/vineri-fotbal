@@ -2,112 +2,604 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin — Vineri Fotbal ⚽</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Panou admin — Vineri Fotbal ⚽</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔑</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#f4f6f5; color:#1c2620; margin:0; }
-  .wrap{ max-width:480px; margin:0 auto; padding:24px 16px 60px; }
-  h1{ font-size:20px; }
-  .card{ background:#fff; border:1px solid #e3e8e5; border-radius:14px; padding:20px; margin-top:16px; }
-  label{ display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
-  input, select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid #e3e8e5; font-size:15px; }
-  button{ font-size:15px; font-weight:700; border:none; border-radius:10px; padding:12px 16px; margin-top:16px; width:100%; background:#1f8a4c; color:#fff; cursor:pointer; }
-  button.danger{ background:#c53030; }
-  .muted{ color:#6b7770; font-size:13px; }
-  .msg{ margin-top:12px; font-size:14px; }
-  ul{ padding-left:18px; }
+  :root{
+    --pitch-0:#04150d;
+    --pitch-1:#0a2b1a;
+    --pitch-2:#0e3a22;
+    --grass:#22c55e;
+    --grass-2:#16a34a;
+    --grass-glow: rgba(34,197,94,0.45);
+    --gold:#f4c430;
+    --white:#f5f8f6;
+    --muted:#93ab9f;
+    --card:rgba(15,35,24,0.78);
+    --card-2:rgba(255,255,255,0.035);
+    --card-border:rgba(255,255,255,0.09);
+    --input-bg:rgba(4,21,13,0.55);
+    --line:rgba(255,255,255,0.09);
+    --red:#f0473f;
+    --amber:#f2a93b;
+    --blue:#0666EB;
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; min-height:100%; background:var(--pitch-0); overscroll-behavior-y:none; }
+  body{
+    font-family:'Rajdhani',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color:var(--white);
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(244,196,48,0.09), transparent 60%),
+      radial-gradient(ellipse 900px 600px at 85% 0%, rgba(34,197,94,0.18), transparent 55%),
+      radial-gradient(ellipse 1200px 800px at 50% 120%, rgba(22,163,74,0.14), transparent 60%),
+      repeating-linear-gradient(115deg, var(--pitch-1) 0px, var(--pitch-1) 90px, var(--pitch-2) 90px, var(--pitch-2) 180px),
+      var(--pitch-0);
+    min-height:100vh;
+    padding-bottom:96px;
+  }
+  h1,h2,h3{ font-family:'Bebas Neue',sans-serif; font-weight:400; letter-spacing:.03em; margin:0; }
+  ::selection{ background:var(--grass); color:#04150d; }
+
+  /* ---- Topbar ---- */
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px;
+    padding:14px 18px;
+    background:rgba(4,21,13,0.82);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-title{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .topbar-title .icon{ font-size:22px; flex-shrink:0; }
+  .topbar-title-text{ min-width:0; }
+  .topbar-title h1{ font-size:20px; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .topbar-sub{ font-size:11.5px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+  .topbar-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .icon-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:36px; height:36px; border-radius:10px;
+    background:var(--card-2); border:1px solid var(--card-border);
+    color:var(--white); font-size:16px; cursor:pointer;
+  }
+  .icon-btn:active{ transform:translateY(1px); }
+  .icon-btn.spinning{ animation:spin 0.7s linear infinite; }
+  @keyframes spin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+  .wrap{ max-width:1040px; margin:0 auto; padding:22px 16px 24px; }
+
+  /* ---- Login screen ---- */
+  .login-wrap{
+    min-height:calc(100vh - 64px);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px 16px;
+  }
+  .login-card{
+    width:100%; max-width:380px;
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:20px;
+    padding:32px 26px 28px;
+    text-align:center;
+    box-shadow:0 24px 70px -24px rgba(0,0,0,0.6);
+    animation: rise .45s ease both;
+  }
+  @keyframes rise{ from{ opacity:0; transform:translateY(14px);} to{ opacity:1; transform:translateY(0);} }
+  .login-emoji{ font-size:40px; margin-bottom:6px; filter:drop-shadow(0 0 18px var(--grass-glow)); }
+  .login-card h1{ font-size:26px; margin-bottom:4px; }
+  .login-card .sub{ color:var(--muted); font-size:13.5px; font-weight:600; margin-bottom:22px; }
+  .field-label{
+    display:block; text-align:left; font-size:12.5px; font-weight:700;
+    color:var(--muted); text-transform:uppercase; letter-spacing:.05em;
+    margin:0 0 7px;
+  }
+  .key-input-wrap{ position:relative; }
+  .key-input-wrap input{ padding-right:44px; }
+  .key-toggle{
+    position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    background:none; border:none; color:var(--muted); font-size:16px;
+    width:34px; height:34px; border-radius:8px; cursor:pointer;
+  }
+  .key-toggle:hover{ background:var(--card-2); }
+  input[type="text"], input[type="number"], input[type="password"]{
+    width:100%; padding:12px 14px; border-radius:11px;
+    background:var(--input-bg); border:1px solid var(--card-border);
+    color:var(--white); font-family:inherit; font-size:15px; font-weight:600;
+    outline:none; transition:border-color .15s, box-shadow .15s;
+  }
+  input::placeholder{ color:var(--muted); font-weight:600; opacity:.7; }
+  input:focus{ border-color:var(--grass); box-shadow:0 0 0 3px rgba(34,197,94,0.18); }
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:13px 16px; border-radius:12px; border:none;
+    font-family:inherit; font-weight:700; font-size:15px; cursor:pointer;
+    color:#04150d;
+    background:linear-gradient(135deg, var(--grass) 0%, var(--grass-2) 100%);
+    box-shadow:0 14px 30px -14px rgba(34,197,94,0.6);
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn:disabled{ opacity:.6; cursor:default; transform:none; }
+  .btn-ghost{
+    background:var(--card-2); color:var(--white);
+    border:1px solid var(--card-border); box-shadow:none;
+  }
+  .login-note{ margin-top:16px; font-size:12px; color:var(--muted); line-height:1.5; }
+  .login-note code{ background:rgba(255,255,255,0.08); padding:1px 6px; border-radius:5px; font-size:11.5px; }
+  .login-error{
+    margin-top:14px; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:700;
+    background:rgba(240,71,63,0.12); color:#ff8a83; border:1px solid rgba(240,71,63,0.35);
+    text-align:left; display:none;
+  }
+  .login-error.show{ display:block; }
+
+  /* ---- Dashboard ---- */
+  #dashboard{ display:none; }
+  #dashboard.show{ display:block; }
+
+  .hero{
+    background:var(--card); border:1px solid var(--card-border); border-radius:18px;
+    padding:20px 22px; margin-bottom:18px;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px;
+  }
+  .hero-date-label{ font-size:11.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
+  .hero-date{ font-size:clamp(26px, 5vw, 34px); line-height:1; }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 14px; border-radius:999px; font-size:12.5px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .status-pill.open{ background:rgba(34,197,94,0.16); color:#5eeba3; border:1px solid rgba(34,197,94,0.35); }
+  .status-pill.cancelled{ background:rgba(240,71,63,0.14); color:#ff8a83; border:1px solid rgba(240,71,63,0.35); }
+
+  .stats-row{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr));
+    gap:12px; margin-bottom:18px;
+  }
+  .stat-tile{
+    background:var(--card); border:1px solid var(--card-border); border-radius:16px;
+    padding:16px 18px;
+  }
+  .stat-tile .num{ font-family:'Bebas Neue',sans-serif; font-size:30px; line-height:1; color:var(--white); }
+  .stat-tile .num span{ font-size:17px; color:var(--muted); }
+  .stat-tile .label{ margin-top:6px; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+
+  .grid-2col{ display:grid; grid-template-columns:1fr; gap:18px; }
+  @media (min-width:860px){ .grid-2col{ grid-template-columns:1fr 1fr; align-items:start; } }
+
+  .card{
+    background:var(--card); border:1px solid var(--card-border); border-radius:18px;
+    padding:20px 20px 22px; margin-bottom:18px;
+  }
+  .card-title{ display:flex; align-items:center; gap:9px; font-size:15px; font-weight:700; margin-bottom:16px; }
+  .card-title .em{ font-size:18px; }
+  .card-note{ font-size:12.5px; color:var(--muted); font-weight:600; line-height:1.5; margin:8px 0 0; }
+
+  .field{ margin-bottom:16px; }
+  .field:last-child{ margin-bottom:0; }
+  .field-row{ display:flex; gap:12px; }
+  .field-row .field{ flex:1; }
+
+  .seg{ display:flex; gap:8px; }
+  .seg-btn{
+    flex:1; padding:11px 12px; border-radius:11px; text-align:center;
+    background:var(--card-2); border:1px solid var(--card-border); color:var(--muted);
+    font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .seg-btn.active.open-state{ background:rgba(34,197,94,0.16); color:#5eeba3; border-color:rgba(34,197,94,0.4); }
+  .seg-btn.active.cancelled-state{ background:rgba(240,71,63,0.14); color:#ff8a83; border-color:rgba(240,71,63,0.4); }
+
+  /* ---- Price tiers ---- */
+  .tier-card{
+    background:var(--card-2); border:1px solid var(--card-border); border-radius:14px;
+    padding:14px 14px 12px; margin-bottom:12px; position:relative;
+  }
+  .tier-card-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .tier-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11.5px; font-weight:700; color:var(--gold);
+    text-transform:uppercase; letter-spacing:.05em;
+  }
+  .tier-remove{
+    width:28px; height:28px; border-radius:8px; border:none; cursor:pointer;
+    background:rgba(240,71,63,0.14); color:#ff8a83; font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tier-fields{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .tier-fields label{ display:block; font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px; }
+  .tier-fields input{ padding:9px 10px; font-size:14px; border-radius:9px; }
+  .tier-preview{
+    margin-top:10px; font-size:12.5px; font-weight:700; color:#5eeba3;
+    display:flex; align-items:center; gap:6px;
+  }
+  .tier-preview .muted-part{ color:var(--muted); font-weight:600; }
+  .add-tier-btn{
+    width:100%; padding:11px; border-radius:11px; border:1px dashed var(--card-border);
+    background:transparent; color:var(--muted); font-family:inherit; font-weight:700; font-size:13.5px;
+    cursor:pointer; margin-top:2px;
+  }
+  .add-tier-btn:hover{ color:var(--white); border-color:var(--grass); }
+
+  /* ---- Danger zone ---- */
+  .danger-card{
+    border:1px solid rgba(240,71,63,0.35);
+    background:linear-gradient(135deg, rgba(240,71,63,0.08), rgba(240,71,63,0.02));
+  }
+  .danger-card .card-title{ color:#ff8a83; }
+  .danger-btn{
+    width:100%; padding:13px 16px; border-radius:12px; border:1px solid rgba(240,71,63,0.4);
+    background:rgba(240,71,63,0.14); color:#ff8a83; font-family:inherit; font-weight:700; font-size:14.5px;
+    cursor:pointer;
+  }
+  .danger-btn:active{ transform:translateY(1px); }
+  .confirm-row{
+    display:none; gap:10px; margin-top:12px;
+    background:rgba(240,71,63,0.08); border:1px solid rgba(240,71,63,0.3); border-radius:12px;
+    padding:12px;
+  }
+  .confirm-row.show{ display:flex; flex-direction:column; gap:10px; }
+  .confirm-row p{ margin:0; font-size:13px; font-weight:700; color:#ffb3ae; }
+  .confirm-actions{ display:flex; gap:8px; }
+  .confirm-actions button{ flex:1; }
+  .confirm-yes{
+    background:#c0362f; color:#fff; border:none; border-radius:10px; padding:10px; font-family:inherit; font-weight:700; font-size:13.5px; cursor:pointer;
+  }
+  .confirm-no{
+    background:var(--card-2); color:var(--white); border:1px solid var(--card-border); border-radius:10px; padding:10px; font-family:inherit; font-weight:700; font-size:13.5px; cursor:pointer;
+  }
+
+  /* ---- Sticky save bar ---- */
+  .savebar{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    display:flex; align-items:center; gap:12px;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:rgba(4,21,13,0.92);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+  }
+  .savebar-info{ flex:1; min-width:0; font-size:12px; color:var(--muted); font-weight:600; }
+  .savebar .btn{ width:auto; padding:12px 26px; }
+
+  /* ---- Toast ---- */
+  #toast{
+    position:fixed; left:50%; bottom:88px; transform:translate(-50%, 20px);
+    z-index:80; padding:12px 20px; border-radius:12px;
+    font-size:14px; font-weight:700; text-align:center;
+    max-width:90vw;
+    opacity:0; pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    box-shadow:0 16px 40px -14px rgba(0,0,0,0.6);
+  }
+  #toast.show{ opacity:1; transform:translate(-50%, 0); }
+  #toast.ok{ background:linear-gradient(135deg, var(--grass), var(--grass-2)); color:#04150d; }
+  #toast.error{ background:#c0362f; color:#fff; }
+
+  .skeleton{ animation:pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>🔑 Panou admin — Fotbal Vineri</h1>
-  <div class="card">
-    <label for="key">Cheie admin</label>
-    <input type="password" id="key" placeholder="Cheia setată în ADMIN_KEY">
-    <button id="load">Încarcă meciul curent</button>
-    <p class="muted">Cheia se setează la pornirea serverului (variabila de mediu <code>ADMIN_KEY</code>). Nu o distribui în grup.</p>
-  </div>
 
-  <div class="card" id="edit-card" style="display:none;">
-    <h2 id="m-date"></h2>
-    <p class="muted" id="m-summary"></p>
-    <label for="capacity">Capacitate (nr. locuri)</label>
-    <input type="number" id="capacity" min="0">
-    <label for="time">Ora</label>
-    <input type="text" id="time" placeholder="19:00">
-    <label for="location">Locație</label>
-    <input type="text" id="location">
-    <label for="revtag">Revolut tag (fără @)</label>
-    <input type="text" id="revtag" placeholder="ex: sbnn3">
-
-    <label>Praguri de preț</label>
-    <div id="tiers-list"></div>
-    <button type="button" id="add-tier" style="background:rgba(255,255,255,0.08); font-size:13px; padding:9px; margin-top:8px;">+ Adaugă prag</button>
-    <p class="muted" style="margin-top:8px;">Ex: la 15 jucători → 70€ total / 2 ore; la 10 jucători → 50€ total / 1,5 ore. Aplicația alege automat pragul potrivit capacității setate mai sus (nu numărului de confirmați) și împarte automat costul total la numărul de jucători al pragului, rotunjit în sus la 0,5€ — deci prețul per jucător NU se setează manual, se calculează singur (ex: 50€ / 10 jucători = 5€/jucător).</p>
-
-    <label for="lat">Coordonate teren (pentru vreme)</label>
-    <div style="display:flex; gap:8px;">
-      <input type="number" id="lat" placeholder="latitudine" step="0.0001" style="flex:1;">
-      <input type="number" id="lon" placeholder="longitudine" step="0.0001" style="flex:1;">
+<div class="topbar">
+  <div class="topbar-title">
+    <span class="icon">🔑</span>
+    <div class="topbar-title-text">
+      <h1>Panou admin</h1>
+      <div class="topbar-sub">Vineri - Seară de Fotbal</div>
     </div>
-    <p class="muted" style="margin-top:6px;">Schimbă doar dacă se mută terenul în alt loc — nu afectează harta, doar prognoza meteo.</p>
-
-    <label for="status">Status meci</label>
-    <select id="status">
-      <option value="open">Deschis</option>
-      <option value="cancelled">Anulat</option>
-    </select>
-    <button id="save">Salvează</button>
-    <div class="msg" id="msg"></div>
   </div>
-
-  <div class="card" id="reset-card" style="display:none;">
-    <h2>⚠️ Resetează lista</h2>
-    <p class="muted">Șterge toți participanții și lista de rezervă a meciului curent (jucătorii înregistrați rămân, doar prezența pentru săptămâna asta se golește). Util înainte să anunți în grup, ca toată lumea să pornească de la 0.</p>
-    <button id="reset" class="danger">Resetează lista pentru meciul curent</button>
-    <div class="msg" id="reset-msg"></div>
+  <div class="topbar-actions" id="topbar-actions" style="display:none;">
+    <button type="button" class="icon-btn" id="btn-refresh" title="Reîncarcă">🔄</button>
+    <button type="button" class="icon-btn" id="btn-logout" title="Ieși">🚪</button>
   </div>
 </div>
+
+<!-- ---- Ecran login ---- -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <div class="login-emoji">🔑</div>
+    <h1>Panou admin</h1>
+    <p class="sub">Fotbal Vineri ⚽</p>
+
+    <label class="field-label" for="key">Cheie admin</label>
+    <div class="key-input-wrap">
+      <input type="password" id="key" placeholder="Cheia setată în ADMIN_KEY" autocomplete="off">
+      <button type="button" class="key-toggle" id="key-toggle" title="Arată/ascunde">👁️</button>
+    </div>
+    <button class="btn" id="load" style="margin-top:16px;">Intră în panou</button>
+    <div class="login-error" id="login-error"></div>
+    <p class="login-note">Cheia se setează la pornirea serverului (variabila de mediu <code>ADMIN_KEY</code>). Nu o distribui în grup.</p>
+  </div>
+</div>
+
+<!-- ---- Dashboard ---- -->
+<div id="dashboard">
+  <div class="wrap">
+
+    <div class="hero">
+      <div>
+        <div class="hero-date-label">Meciul curent</div>
+        <div class="hero-date" id="m-date">—</div>
+      </div>
+      <div class="status-pill open" id="hero-status-pill">Deschis</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-tile">
+        <div class="num" id="stat-confirmed">0<span>/0</span></div>
+        <div class="label">Confirmați</div>
+      </div>
+      <div class="stat-tile">
+        <div class="num" id="stat-waitlist">0</div>
+        <div class="label">Pe rezervă</div>
+      </div>
+      <div class="stat-tile">
+        <div class="num" id="stat-price">—</div>
+        <div class="label">Preț / jucător acum</div>
+      </div>
+    </div>
+
+    <div class="grid-2col">
+      <div>
+        <div class="card">
+          <div class="card-title"><span class="em">⚙️</span> Setări meci</div>
+
+          <div class="field">
+            <label class="field-label" for="capacity">Capacitate (nr. locuri)</label>
+            <input type="number" id="capacity" min="0">
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="time">Ora</label>
+              <input type="text" id="time" placeholder="19:00">
+            </div>
+            <div class="field">
+              <label class="field-label" for="revtag">Revolut tag</label>
+              <input type="text" id="revtag" placeholder="ex: sbnn3">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="location">Locație</label>
+            <input type="text" id="location">
+          </div>
+
+          <div class="field">
+            <label class="field-label">Status meci</label>
+            <div class="seg">
+              <button type="button" class="seg-btn open-state" id="seg-open" data-status="open">✅ Deschis</button>
+              <button type="button" class="seg-btn cancelled-state" id="seg-cancelled" data-status="cancelled">🚫 Anulat</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="em">🧭</span> Coordonate teren</div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="lat">Latitudine</label>
+              <input type="number" id="lat" step="0.0001">
+            </div>
+            <div class="field">
+              <label class="field-label" for="lon">Longitudine</label>
+              <input type="number" id="lon" step="0.0001">
+            </div>
+          </div>
+          <p class="card-note">Schimbă doar dacă se mută terenul în alt loc — nu afectează harta, doar prognoza meteo.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title"><span class="em">💶</span> Praguri de preț</div>
+          <div id="tiers-list"></div>
+          <button type="button" class="add-tier-btn" id="add-tier">+ Adaugă prag</button>
+          <p class="card-note">Aplicația alege automat pragul potrivit capacității setate mai sus (nu numărului de confirmați) și împarte automat costul total la numărul de jucători al pragului, rotunjit în sus la 0,5€ — prețul per jucător nu se setează manual.</p>
+        </div>
+
+        <div class="card danger-card">
+          <div class="card-title"><span class="em">⚠️</span> Zonă periculoasă</div>
+          <p class="card-note" style="margin:0 0 14px;">Șterge toți participanții și lista de rezervă a meciului curent (jucătorii înregistrați rămân, doar prezența pentru săptămâna asta se golește).</p>
+          <button type="button" class="danger-btn" id="reset">Resetează lista pentru meciul curent</button>
+          <div class="confirm-row" id="confirm-row">
+            <p>Sigur vrei să ștergi toată lista? Nu poate fi refăcut.</p>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-no" id="confirm-no">Anulează</button>
+              <button type="button" class="confirm-yes" id="confirm-yes">Da, șterge lista</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="savebar">
+    <div class="savebar-info" id="savebar-info">Modificările se salvează manual.</div>
+    <button class="btn" id="save">💾 Salvează</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
 <script>
   const el = (id) => document.getElementById(id);
+  const KEY_STORAGE = 'vineri_admin_key';
   let currentKey = '';
+  let selectedStatus = 'open';
 
-  function addTierRow(tier){
-    const row = document.createElement('div');
-    row.className = 'tier-row';
-    row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-top:8px;';
-    row.innerHTML = `
-      <input type="number" class="tier-min" placeholder="min jucători" min="1" style="flex:1;" value="${tier ? tier.minPlayers : ''}">
-      <input type="number" class="tier-cost" placeholder="cost total €" min="0" step="0.5" style="flex:1;" value="${tier ? tier.totalCost : ''}">
-      <input type="number" class="tier-hours" placeholder="ore" min="0" step="0.5" style="flex:1;" value="${tier ? tier.hours : ''}">
-      <button type="button" class="tier-remove" style="width:auto; margin:0; padding:10px 12px; background:rgba(240,71,63,0.14); color:#ff8a83; border-radius:8px; font-size:16px;">×</button>
-    `;
-    row.querySelector('.tier-remove').addEventListener('click', () => row.remove());
-    el('tiers-list').appendChild(row);
+  // ---------- Toast ----------
+  let toastTimer = null;
+  function showToast(msg, type){
+    const t = el('toast');
+    t.textContent = msg;
+    t.className = type === 'error' ? 'error' : 'ok';
+    void t.offsetWidth;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
   }
 
-  async function load(){
-    currentKey = el('key').value.trim();
-    const res = await fetch('/api/admin/match?key=' + encodeURIComponent(currentKey));
-    const data = await res.json();
-    if (!res.ok) { el('msg').textContent = data.error || 'Eroare'; return; }
-    el('edit-card').style.display = 'block';
-    el('reset-card').style.display = 'block';
-    el('m-date').textContent = data.match.date;
-    el('m-summary').textContent = `${data.confirmedCount}/${data.match.capacity} confirmați, ${data.waitlist.length} pe rezervă`;
+  // ---------- Formatare pret / data ----------
+  function formatEuro(n){
+    const v = Math.round(Number(n) * 100) / 100;
+    return (Number.isInteger(v) ? v : v.toFixed(1)) + '€';
+  }
+  const LUNI = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
+  function formatDate(iso){
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${d} ${LUNI[m - 1]} ${y}`;
+  }
+  function computePreview(minPlayers, totalCost){
+    const min = Number(minPlayers), cost = Number(totalCost);
+    if (!min || !cost) return null;
+    const perPlayer = Math.ceil((cost / min) / 0.5) * 0.5;
+    return perPlayer;
+  }
+
+  // ---------- Key visibility ----------
+  el('key-toggle').addEventListener('click', () => {
+    const input = el('key');
+    input.type = input.type === 'password' ? 'text' : 'password';
+    el('key-toggle').textContent = input.type === 'password' ? '👁️' : '🙈';
+  });
+  el('key').addEventListener('keydown', (e) => { if (e.key === 'Enter') load('login'); });
+
+  // ---------- Praguri pret ----------
+  function addTierRow(tier){
+    const row = document.createElement('div');
+    row.className = 'tier-card';
+    const idx = document.querySelectorAll('#tiers-list .tier-card').length + 1;
+    row.innerHTML = `
+      <div class="tier-card-head">
+        <span class="tier-badge">🏷️ Prag ${idx}</span>
+        <button type="button" class="tier-remove" title="Șterge pragul">×</button>
+      </div>
+      <div class="tier-fields">
+        <div><label>Min. jucători</label><input type="number" class="tier-min" min="1" value="${tier ? tier.minPlayers : ''}"></div>
+        <div><label>Cost total €</label><input type="number" class="tier-cost" min="0" step="0.5" value="${tier ? tier.totalCost : ''}"></div>
+        <div><label>Ore</label><input type="number" class="tier-hours" min="0" step="0.5" value="${tier ? tier.hours : ''}"></div>
+      </div>
+      <div class="tier-preview"></div>
+    `;
+    const minInput = row.querySelector('.tier-min');
+    const costInput = row.querySelector('.tier-cost');
+    const previewEl = row.querySelector('.tier-preview');
+
+    function updatePreview(){
+      const p = computePreview(minInput.value, costInput.value);
+      previewEl.innerHTML = p !== null
+        ? `→ <span>${formatEuro(p)}</span> <span class="muted-part">/ jucător (rotunjit automat)</span>`
+        : `<span class="muted-part">Completează min. jucători și costul total pentru previzualizare.</span>`;
+    }
+    minInput.addEventListener('input', updatePreview);
+    costInput.addEventListener('input', updatePreview);
+    updatePreview();
+
+    row.querySelector('.tier-remove').addEventListener('click', () => {
+      row.remove();
+      renumberTiers();
+    });
+    el('tiers-list').appendChild(row);
+  }
+  function renumberTiers(){
+    document.querySelectorAll('#tiers-list .tier-card .tier-badge').forEach((b, i) => {
+      b.textContent = `🏷️ Prag ${i + 1}`;
+    });
+  }
+  el('add-tier').addEventListener('click', () => addTierRow(null));
+
+  // ---------- Status segmentat ----------
+  function setStatus(status){
+    selectedStatus = status;
+    el('seg-open').classList.toggle('active', status === 'open');
+    el('seg-cancelled').classList.toggle('active', status === 'cancelled');
+  }
+  el('seg-open').addEventListener('click', () => setStatus('open'));
+  el('seg-cancelled').addEventListener('click', () => setStatus('cancelled'));
+
+  // ---------- Incarcare date ----------
+  // reason: 'login' (apasat din ecranul de login), 'refresh' (butonul de reincarcare),
+  // 'auto' (auto-login din sessionStorage) sau 'silent' (reincarcare interna, dupa save/reset — au deja propriul toast)
+  async function load(reason){
+    const typedKey = el('key').value.trim();
+    if (typedKey) currentKey = typedKey;
+    if (!currentKey) { showLoginError('Introdu cheia admin.'); return; }
+
+    const loginBtn = el('load');
+    const refreshBtn = el('btn-refresh');
+    const wasLoggedOut = !el('dashboard').classList.contains('show');
+    if (wasLoggedOut) { loginBtn.disabled = true; loginBtn.textContent = 'Se conectează...'; }
+    if (reason === 'refresh') refreshBtn.classList.add('spinning');
+
+    try {
+      const res = await fetch('/api/admin/match?key=' + encodeURIComponent(currentKey));
+      const data = await res.json();
+      if (!res.ok) {
+        showLoginError(data.error || 'Eroare la conectare.');
+        sessionStorage.removeItem(KEY_STORAGE);
+        return;
+      }
+      sessionStorage.setItem(KEY_STORAGE, currentKey);
+      hideLoginError();
+      el('login-screen').style.display = 'none';
+      el('dashboard').classList.add('show');
+      el('topbar-actions').style.display = 'flex';
+      renderData(data);
+      if (reason === 'login') showToast('Conectat cu succes ✅', 'ok');
+      else if (reason === 'refresh') showToast('Actualizat ✅', 'ok');
+    } catch (e) {
+      showLoginError('Nu am putut contacta serverul. Încearcă din nou.');
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Intră în panou';
+      refreshBtn.classList.remove('spinning');
+    }
+  }
+
+  function showLoginError(msg){
+    const e = el('login-error');
+    e.textContent = msg;
+    e.classList.add('show');
+  }
+  function hideLoginError(){ el('login-error').classList.remove('show'); }
+
+  function renderData(data){
+    el('m-date').textContent = formatDate(data.match.date);
+
+    const pill = el('hero-status-pill');
+    const cancelled = data.match.status === 'cancelled';
+    pill.textContent = cancelled ? '🚫 Anulat' : '✅ Deschis';
+    pill.className = 'status-pill ' + (cancelled ? 'cancelled' : 'open');
+
+    el('stat-confirmed').innerHTML = `${data.confirmedCount}<span>/${data.match.capacity}</span>`;
+    el('stat-waitlist').textContent = data.waitlist.length;
+    el('stat-price').textContent = data.pricing ? formatEuro(data.pricing.perPlayer) : '—';
+
     el('capacity').value = data.match.capacity;
     el('time').value = data.match.time;
     el('location').value = data.match.location;
     el('revtag').value = data.match.revtag;
-    el('status').value = data.match.status;
     el('lat').value = data.match.lat;
     el('lon').value = data.match.lon;
+    setStatus(data.match.status);
+
     el('tiers-list').innerHTML = '';
     (data.match.priceTiers || []).forEach(addTierRow);
+
+    disarmReset();
   }
 
+  // ---------- Salvare ----------
   async function save(){
-    const priceTiers = Array.from(document.querySelectorAll('.tier-row')).map((row) => ({
+    const priceTiers = Array.from(document.querySelectorAll('.tier-card')).map((row) => ({
       minPlayers: row.querySelector('.tier-min').value,
       totalCost: row.querySelector('.tier-cost').value,
       hours: row.querySelector('.tier-hours').value,
@@ -119,56 +611,89 @@
       time: el('time').value,
       location: el('location').value,
       revtag: el('revtag').value,
-      status: el('status').value,
+      status: selectedStatus,
       priceTiers,
       lat: el('lat').value,
       lon: el('lon').value,
     };
-    const res = await fetch('/api/admin/match', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    el('msg').textContent = res.ok ? 'Salvat ✅' : (data.error || 'Eroare');
-    if (res.ok) load();
+
+    const saveBtn = el('save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Se salvează...';
+    try {
+      const res = await fetch('/api/admin/match', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Eroare la salvare.', 'error'); return; }
+      showToast('Salvat cu succes ✅', 'ok');
+      const now = new Date();
+      el('savebar-info').textContent = `Ultima salvare: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      renderData(data);
+    } catch (e) {
+      showToast('Nu am putut contacta serverul.', 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Salvează';
+    }
   }
-
-  let resetArmed = false;
-  let resetTimer = null;
-
-  function armReset(){
-    resetArmed = true;
-    el('reset').textContent = 'Sigur? Apasă din nou ca să confirmi';
-    el('reset-msg').textContent = 'Ai 5 secunde să apeși încă o dată ca să confirmi ștergerea.';
-    clearTimeout(resetTimer);
-    resetTimer = setTimeout(disarmReset, 5000);
-  }
-
-  function disarmReset(){
-    resetArmed = false;
-    clearTimeout(resetTimer);
-    el('reset').textContent = 'Resetează lista pentru meciul curent';
-    el('reset-msg').textContent = '';
-  }
-
-  async function resetList(){
-    if (!resetArmed) { armReset(); return; }
-    disarmReset();
-    const res = await fetch('/api/admin/reset', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({key: currentKey}),
-    });
-    const data = await res.json();
-    el('reset-msg').textContent = res.ok ? 'Lista a fost resetată ✅' : (data.error || 'Eroare');
-    if (res.ok) load();
-  }
-
-  el('load').addEventListener('click', load);
   el('save').addEventListener('click', save);
-  el('reset').addEventListener('click', resetList);
-  el('add-tier').addEventListener('click', () => addTierRow(null));
+
+  // ---------- Reset lista (doua pasuri, inline) ----------
+  function armReset(){
+    el('confirm-row').classList.add('show');
+  }
+  function disarmReset(){
+    el('confirm-row').classList.remove('show');
+  }
+  el('reset').addEventListener('click', armReset);
+  el('confirm-no').addEventListener('click', disarmReset);
+  el('confirm-yes').addEventListener('click', async () => {
+    const btn = el('confirm-yes');
+    btn.disabled = true;
+    btn.textContent = 'Se șterge...';
+    try {
+      const res = await fetch('/api/admin/reset', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key: currentKey}),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Eroare la resetare.', 'error'); return; }
+      showToast('Lista a fost resetată ✅', 'ok');
+      disarmReset();
+      load('silent');
+    } catch (e) {
+      showToast('Nu am putut contacta serverul.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Da, șterge lista';
+    }
+  });
+
+  // ---------- Actiuni topbar ----------
+  el('load').addEventListener('click', () => load('login'));
+  el('btn-refresh').addEventListener('click', () => load('refresh'));
+  el('btn-logout').addEventListener('click', () => {
+    sessionStorage.removeItem(KEY_STORAGE);
+    currentKey = '';
+    el('key').value = '';
+    el('dashboard').classList.remove('show');
+    el('topbar-actions').style.display = 'none';
+    el('login-screen').style.display = 'flex';
+  });
+
+  // ---------- Auto-login daca avem cheia salvata in aceasta sesiune de browser ----------
+  (function init(){
+    const saved = sessionStorage.getItem(KEY_STORAGE);
+    if (saved) {
+      currentKey = saved;
+      el('key').value = saved;
+      load('auto');
+    }
+  })();
 </script>
 </body>
 </html>
