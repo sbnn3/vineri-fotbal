@@ -381,16 +381,22 @@ function matchView(data, match, token) {
   const mapEntry = (r) => {
     const p = data.players.find((pl) => pl.id === r.playerId);
     const base = { name: p ? p.name : 'Jucator', payment: r.payment || null };
-    // numarul de telefon, id-ul jucatorului, statusul platii si rolul de admin/moderator apar doar pentru cei 3 admini
+    // eticheta "Administrator" e vizibila pentru toata lumea (nu doar pentru admini), ca oricine
+    // sa stie cine e admin in lista
+    base.role = getAdminRole(p ? p.phone : null);
+    // id-ul jucatorului, statusul platii si flagul de protectie raman doar pentru admini (folosite
+    // la moderare); telefonul insa apare fie pentru admini (pot suna pe oricine), fie pentru oricine
+    // altcineva doar daca randul e al unui admin (ca sa poata fi sunat de un jucator obisnuit)
     if (isAdmin) {
       base.playerId = r.playerId;
       base.phone = p ? p.phone : null;
       base.paid = Boolean(r.paid);
-      base.role = getAdminRole(p ? p.phone : null);
       // separat de eticheta afisata (toti cei 3 admini arata "Administrator"), doar contul
       // proprietarului e marcat protejat — clientul foloseste asta ca sa ascunda butoanele de
       // scos/blocat pe randul lui, indiferent cine se uita la listă
       base.protected = isProtectedAdmin(p ? p.phone : null);
+    } else if (base.role === 'admin') {
+      base.phone = p ? p.phone : null;
     }
     return base;
   };

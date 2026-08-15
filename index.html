@@ -1262,7 +1262,7 @@
 
   function squadRowHtml(p, i, benched, isMe){
     const jerseyClass = benched ? 'jersey bench' : 'jersey';
-    // identitate: numarul + numele (+ eticheta de rol, doar in fata admin-ilor), lipite intre ele in stanga randului
+    // identitate: numarul + numele (+ eticheta de rol, vizibila pentru toata lumea), lipite intre ele in stanga randului
     const identity = `<span class="${jerseyClass}">${i+1}</span><span class="pname-group"><span class="pname">${escapeHtml(p.name)}</span>${roleTagHtml(p.role)}</span>`;
     if (isAdminView && p.playerId) {
       const callBtn = p.phone
@@ -1284,7 +1284,12 @@
       const rightGroup = `<span class="prow-right">${paymentBadge(p)}</span>`;
       return `<li class="${isMe ? 'me' : ''}">${identity}${actionIcons}${rightGroup}</li>`;
     }
-    return `<li class="${isMe ? 'me' : ''}">${identity}<span class="prow-right">${paymentBadge(p)}</span></li>`;
+    // vizitator obisnuit: fara butoane de scos/blocat, dar poate suna direct un admin din lista
+    // (telefonul apare doar pe randul unui admin — vezi server.js matchView)
+    const publicCallBtn = (p.role === 'admin' && p.phone)
+      ? `<span class="prow-icons"><a href="tel:${escapeHtml(p.phone)}" class="call-btn" title="Sună pe ${escapeHtml(p.name)}">📞</a></span>`
+      : '';
+    return `<li class="${isMe ? 'me' : ''}">${identity}${publicCallBtn}<span class="prow-right">${paymentBadge(p)}</span></li>`;
   }
 
   function celebrate(){
