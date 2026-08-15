@@ -54,6 +54,7 @@ let cachedData = null;
 
 function ensureConfig(data) {
   data.config = Object.assign({}, DEFAULT_CONFIG, data.config || {});
+  if (!Array.isArray(data.blocked)) data.blocked = []; // migrare: lista de jucatori blocati, adaugata ulterior
 }
 
 async function upstashGet() {
@@ -98,7 +99,7 @@ async function initData() {
       console.error('data.json local corupt, pornim cu date noi:', e.message);
     }
   }
-  cachedData = { players: [], matches: [], rsvps: [], config: Object.assign({}, DEFAULT_CONFIG) };
+  cachedData = { players: [], matches: [], rsvps: [], blocked: [], config: Object.assign({}, DEFAULT_CONFIG) };
 }
 
 function getData() {
@@ -141,7 +142,15 @@ function nextFridayISO() {
 }
 
 function normalizePhone(phone) {
-  return String(phone || '').replace(/[^\d+]/g, '');
+  let p = String(phone || '').replace(/[^\d+]/g, '');
+  if (!p) return '';
+  // numerele irlandeze pot fi scrise ca 08xxxxxxxx sau +3538xxxxxxxx / 003538xxxxxxxx —
+  // le aducem la aceeasi forma (0xxxxxxxx) ca sa fie recunoscute drept acelasi numar
+  // (ex: 0891234567 si +353891234567 trebuie sa se potriveasca la blocare / recunoastere admin)
+  if (p.startsWith('+353')) p = '0' + p.slice(4);
+  else if (p.startsWith('00353')) p = '0' + p.slice(5);
+  else if (/^353\d{7,9}$/.test(p)) p = '0' + p.slice(3);
+  return p;
 }
 
 // ---------- Admini recunoscuti dupa numarul de telefon (nu au nevoie de ADMIN_KEY) ----------
@@ -431,6 +440,20 @@ function findPlayerByPhone(data, phone) {
   return data.players.find((p) => normalizePhone(p.phone) === norm);
 }
 
+function normalizeName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+// verifica daca un numar de telefon si/sau un nume au fost blocate de organizatori —
+// blocarea tine cont de ambele variante de scriere ale numarului (0891234567 si +353891234567)
+function isBlocked(data, phone, name) {
+  const normPhone = normalizePhone(phone);
+  const normNm = normalizeName(name);
+  return (data.blocked || []).some((b) =>
+    (normPhone && b.phone === normPhone) || (normNm && normalizeName(b.name) === normNm)
+  );
+}
+
 // ---------- Server HTTP ----------
 
 const MIME = {
@@ -494,6 +517,9 @@ const server = http.createServer(async (req, res) => {
       if (!name || !phone) return sendJSON(res, 400, { error: 'Numele si telefonul sunt obligatorii.' });
 
       const data = getData();
+      if (isBlocked(data, phone, name)) {
+        return sendJSON(res, 403, { error: 'Acest număr sau nume a fost blocat de organizatori. Dacă e o greșeală, contactează-i direct.' });
+      }
       let player = findPlayerByPhone(data, phone);
       if (player) {
         player.name = name; // permite actualizarea numelui daca s-a schimbat
@@ -542,6 +568,10 @@ const server = http.createServer(async (req, res) => {
       let entry = data.rsvps.find((r) => r.matchId === match.id && r.playerId === token);
 
       if (action === 'join') {
+        // un jucator blocat de organizatori nu se mai poate inscrie, chiar daca mai are sesiunea salvata in telefon
+        if (isBlocked(data, player.phone, player.name)) {
+          return sendJSON(res, 403, { error: 'Ai fost blocat de organizatori și nu te mai poți înscrie. Dacă e o greșeală, contactează-i direct.' });
+        }
         // metoda de plata se alege in modalul afisat la apasarea "Particip", inainte sa fie pus in lista
         const chosenPayment = ['revolut', 'cash'].includes(body.payment) ? body.payment : null;
         if (entry && entry.status === 'confirmed') {
@@ -616,6 +646,37 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, matchView(data, match, token));
     }
 
+    // ---- API: blocheaza un jucator dupa telefon+nume, sa nu se mai poata inregistra ulterior
+    // (doar cei 3 admini recunoscuti dupa telefon) — il si scoate automat din meciul curent ----
+    if (pathname === '/api/admin/block' && req.method === 'POST') {
+      const body = await readBody(req);
+      const token = body.token;
+      const targetId = body.playerId;
+      if (!token || !targetId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
+      const data = getData();
+      const requester = data.players.find((p) => p.id === token);
+      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+
+      const target = data.players.find((p) => p.id === targetId);
+      if (!target) return sendJSON(res, 404, { error: 'Jucator negasit.' });
+
+      const normPhone = normalizePhone(target.phone);
+      if (!isBlocked(data, target.phone, target.name)) {
+        data.blocked.push({
+          id: crypto.randomUUID(),
+          phone: normPhone,
+          name: target.name,
+          blockedAt: new Date().toISOString(),
+        });
+      }
+
+      const match = await getOrCreateCurrentMatch(data);
+      cancelParticipant(data, match, targetId); // il exclude automat din lista curenta
+
+      await persist(data);
+      return sendJSON(res, 200, matchView(data, match, token));
+    }
+
     // ---- API: marcheaza plata cash ca incasata / neincasata (doar cei 3 admini recunoscuti dupa telefon) ----
     if (pathname === '/api/admin/mark-paid' && req.method === 'POST') {
       const body = await readBody(req);
@@ -646,12 +707,29 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, matchView(data, match, null));
     }
 
+    // ---- API ADMIN: deblocheaza un jucator blocat anterior (necesita cheie) ----
+    if (pathname === '/api/admin/unblock' && req.method === 'POST') {
+      const body = await readBody(req);
+      if (body.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
+      const data = getData();
+      const blockedId = body.blockedId;
+      if (!blockedId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
+      data.blocked = (data.blocked || []).filter((b) => b.id !== blockedId);
+      await persist(data);
+      const match = await getOrCreateCurrentMatch(data);
+      const view = matchView(data, match, null);
+      view.blocked = data.blocked;
+      return sendJSON(res, 200, view);
+    }
+
     // ---- API ADMIN: vezi/editeaza meciul curent (necesita cheie) ----
     if (pathname === '/api/admin/match' && req.method === 'GET') {
       if (parsed.query.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
       const data = getData();
       const match = await getOrCreateCurrentMatch(data);
-      return sendJSON(res, 200, matchView(data, match, null));
+      const view = matchView(data, match, null);
+      view.blocked = data.blocked; // vizibil doar aici, in panoul protejat cu ADMIN_KEY
+      return sendJSON(res, 200, view);
     }
 
     if (pathname === '/api/admin/match' && req.method === 'POST') {
@@ -694,7 +772,9 @@ const server = http.createServer(async (req, res) => {
       }
 
       await persist(data);
-      return sendJSON(res, 200, matchView(data, match, null));
+      const view = matchView(data, match, null);
+      view.blocked = data.blocked;
+      return sendJSON(res, 200, view);
     }
 
     // ---- API: vremea pentru meciul curent (Open-Meteo, fara cheie) ----

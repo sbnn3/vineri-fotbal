@@ -648,6 +648,24 @@
     color:#fff;
     box-shadow:0 0 0 3px rgba(240,71,63,0.25);
   }
+  .block-btn{
+    flex-shrink:0;
+    width:24px; height:24px;
+    border-radius:50%;
+    background:rgba(242,169,59,0.14);
+    color:var(--amber);
+    border:1px solid rgba(242,169,59,0.4);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px;
+    font-weight:700;
+    padding:0;
+    line-height:1;
+  }
+  .block-btn.armed{
+    background:var(--amber);
+    color:#04150d;
+    box-shadow:0 0 0 3px rgba(242,169,59,0.3);
+  }
   .call-btn{
     flex-shrink:0;
     width:24px; height:24px;
@@ -880,6 +898,7 @@
     weather: '/api/weather',
     kick: '/api/admin/kick',
     markPaid: '/api/admin/mark-paid',
+    block: '/api/admin/block',
   };
 
   function formatEuro(n){
@@ -938,6 +957,8 @@
   let isAdminView = false;
   let armedKick = null;
   let armedKickTimer = null;
+  let armedBlock = null;
+  let armedBlockTimer = null;
 
   async function init(){
     hide('loading');
@@ -1086,7 +1107,11 @@
       const kickBtn = isSelf
         ? ''
         : `<button type="button" class="kick-btn ${armed ? 'armed' : ''}" data-pid="${p.playerId}" title="${armed ? 'Apasă din nou ca să confirmi' : 'Scoate din listă'}">${armed ? '⚠' : '✕'}</button>`;
-      adminBits = kickBtn + `<span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${callBtn}`;
+      const armedB = armedBlock === p.playerId;
+      const blockBtn = isSelf
+        ? ''
+        : `<button type="button" class="block-btn ${armedB ? 'armed' : ''}" data-pid="${p.playerId}" title="${armedB ? 'Apasă din nou ca să confirmi blocarea' : 'Blochează acest jucător (nu se mai poate înscrie)'}">${armedB ? '⚠' : '🚫'}</button>`;
+      adminBits = blockBtn + kickBtn + `<span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${callBtn}`;
       return `<li class="${isMe ? 'me' : ''}">${adminBits}${paymentBadge(p)}</li>`;
     }
     return `<li class="${isMe ? 'me' : ''}"><span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${paymentBadge(p)}</li>`;
@@ -1211,7 +1236,7 @@
   el('btn-change-revolut').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
   el('btn-change-cash').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
 
-  // ---- Controale admin (doar cei 3 recunoscuti dupa telefon): scoate din listă + marchează cash încasat ----
+  // ---- Controale admin (doar cei 3 recunoscuti dupa telefon): scoate din listă + blochează + marchează cash încasat ----
   // Foloseste un tipar "apasă de 2 ori ca să confirmi" în loc de confirm() nativ, ca să nu blocheze pagina.
   document.addEventListener('click', async (e) => {
     const kickBtn = e.target.closest('.kick-btn');
@@ -1228,6 +1253,32 @@
       armedKick = null;
       try {
         const data = await api(API.kick, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ token: currentToken, playerId: pid }),
+        });
+        renderMatch(data);
+      } catch (err) {
+        el('rsvp-error').textContent = err.message;
+        show('rsvp-error');
+      }
+      return;
+    }
+
+    const blockBtn = e.target.closest('.block-btn');
+    if (blockBtn) {
+      const pid = blockBtn.dataset.pid;
+      if (armedBlock !== pid) {
+        armedBlock = pid;
+        clearTimeout(armedBlockTimer);
+        armedBlockTimer = setTimeout(() => { armedBlock = null; if (lastMatchData) renderMatch(lastMatchData); }, 4000);
+        if (lastMatchData) renderMatch(lastMatchData);
+        return;
+      }
+      clearTimeout(armedBlockTimer);
+      armedBlock = null;
+      try {
+        const data = await api(API.block, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ token: currentToken, playerId: pid }),
