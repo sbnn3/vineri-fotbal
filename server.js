@@ -171,12 +171,11 @@ function isAdminPhone(phone) {
   return ADMIN_PHONES.has(normalizePhone(phone));
 }
 
-// 'admin' = contul protejat (primul numar din lista), 'moderator' = ceilalti admini, null = jucator normal
+// 'admin' pentru oricare din cei 3 admini (toti poarta eticheta "Administrator"), null = jucator normal.
+// Protectia impotriva blocarii/eliminarii nu tine de aceasta eticheta, ci strict de PROTECTED_ADMIN_PHONE
+// (vezi isProtectedAdmin) — deci Dima si Catalin arata la fel ca tine, dar tot nu au niciun drept asupra ta.
 function getAdminRole(phone) {
-  const norm = normalizePhone(phone);
-  if (!norm) return null;
-  if (PROTECTED_ADMIN_PHONE && norm === PROTECTED_ADMIN_PHONE) return 'admin';
-  return ADMIN_PHONES.has(norm) ? 'moderator' : null;
+  return isAdminPhone(phone) ? 'admin' : null;
 }
 
 // contul Administratorului: nimeni (nici ceilalti admini) nu are voie sa-l scoata din lista sau sa-l blocheze
@@ -388,6 +387,10 @@ function matchView(data, match, token) {
       base.phone = p ? p.phone : null;
       base.paid = Boolean(r.paid);
       base.role = getAdminRole(p ? p.phone : null);
+      // separat de eticheta afisata (toti cei 3 admini arata "Administrator"), doar contul
+      // proprietarului e marcat protejat — clientul foloseste asta ca sa ascunda butoanele de
+      // scos/blocat pe randul lui, indiferent cine se uita la listă
+      base.protected = isProtectedAdmin(p ? p.phone : null);
     }
     return base;
   };

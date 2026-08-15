@@ -753,7 +753,6 @@
     box-sizing:border-box;
   }
   .role-tag-admin{ background:rgba(242,169,59,0.16); color:var(--amber); border:1px solid rgba(242,169,59,0.35); }
-  .role-tag-mod{ background:rgba(255,255,255,0.08); color:var(--muted); border:1px solid rgba(255,255,255,0.16); }
   /* ---- Icoanele de actiune (apel/blocare/kick) stau lipite de nume, nu impinse in dreapta ---- */
   .prow-icons{
     display:flex;
@@ -790,8 +789,8 @@
     font-family:inherit;
     cursor:pointer;
   }
-  /* icoanele de actiune (apel/blocare/kick) stau discrete, neutre, cat timp nu sunt "armate" —
-     doar cand admin apasa o data (arm) capata culoarea de avertisment, ca sa nu incarce vizual randul */
+  /* icoanele de actiune (apel/blocare/kick) stau discrete, neutre — apasarea deschide direct
+     un modal de confirmare (Da/Nu), nu mai exista stare "armata" ---- */
   .kick-btn, .block-btn, .call-btn{
     flex-shrink:0;
     width:23px; height:23px;
@@ -807,18 +806,6 @@
     transition:background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
   }
   .kick-btn:active, .block-btn:active, .call-btn:active{ transform:scale(0.92); }
-  .kick-btn.armed{
-    background:#f0473f;
-    color:#fff;
-    border-color:#f0473f;
-    box-shadow:0 0 0 3px rgba(240,71,63,0.25);
-  }
-  .block-btn.armed{
-    background:var(--amber);
-    color:#04150d;
-    border-color:var(--amber);
-    box-shadow:0 0 0 3px rgba(242,169,59,0.3);
-  }
   .call-btn{
     color:#7fe3a8;
     text-decoration:none;
@@ -1046,6 +1033,17 @@
   </div>
 </div>
 
+<!-- Modal generic de confirmare (Da/Nu), refolosit pentru scoate din listă / blochează / deblochează -->
+<div id="confirm-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <p id="confirm-modal-text">Ești sigur?</p>
+    <div class="modal-actions">
+      <button type="button" id="confirm-modal-yes" class="modal-btn-yes">Da</button>
+      <button type="button" id="confirm-modal-no" class="modal-btn-no">Nu</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const API = {
@@ -1115,10 +1113,6 @@
   let lastMapLocation = null;
   let lastMatchData = null;
   let isAdminView = false;
-  let armedKick = null;
-  let armedKickTimer = null;
-  let armedBlock = null;
-  let armedBlockTimer = null;
 
   async function init(){
     hide('loading');
@@ -1260,8 +1254,9 @@
   function roleTagHtml(role){
     // eticheta sta pe un rand separat, sub nume (vezi .pname-group), asa ca textul intreg
     // incape aproape mereu; daca spatiul e totusi foarte stramt, se trunchiaza elegant cu "…"
+    // toti cei 3 admini poarta aceeasi eticheta "Administrator" — protectia contului nu tine
+    // de eticheta, ci e legata strict de un singur numar de telefon (vezi server.js)
     if (role === 'admin') return '<span class="role-tag role-tag-admin">Administrator</span>';
-    if (role === 'moderator') return '<span class="role-tag role-tag-mod">Moderator</span>';
     return '';
   }
 
@@ -1274,18 +1269,16 @@
         ? `<a href="tel:${escapeHtml(p.phone)}" class="call-btn" title="Sună pe ${escapeHtml(p.name)}">📞</a>`
         : '';
       const isSelf = p.playerId === currentToken;
-      // contul Administratorului (rolul 'admin') e protejat integral — nimeni, nici ceilalti admini,
-      // nu are voie sa-l scoata din lista sau sa-l blocheze, asa ca ii ascundem butoanele astea oricui
-      const isProtected = p.role === 'admin';
-      const hideDestructive = isSelf || isProtected;
-      const armed = armedKick === p.playerId;
+      // contul proprietarului e protejat integral — nimeni, nici ceilalti admini, nu are voie
+      // sa-l scoata din lista sau sa-l blocheze, asa ca ii ascundem butoanele astea oricui
+      // (p.protected e independent de eticheta afisata — toti cei 3 admini arata "Administrator")
+      const hideDestructive = isSelf || p.protected;
       const kickBtn = hideDestructive
         ? ''
-        : `<button type="button" class="kick-btn ${armed ? 'armed' : ''}" data-pid="${p.playerId}" title="${armed ? 'Apasă din nou ca să confirmi' : 'Scoate din listă'}">${armed ? '⚠' : '✕'}</button>`;
-      const armedB = armedBlock === p.playerId;
+        : `<button type="button" class="kick-btn" data-pid="${p.playerId}" data-pname="${escapeHtml(p.name)}" title="Scoate din listă">✕</button>`;
       const blockBtn = hideDestructive
         ? ''
-        : `<button type="button" class="block-btn ${armedB ? 'armed' : ''}" data-pid="${p.playerId}" title="${armedB ? 'Apasă din nou ca să confirmi blocarea' : 'Blochează acest jucător (nu se mai poate înscrie)'}">${armedB ? '⚠' : '⊘'}</button>`;
+        : `<button type="button" class="block-btn" data-pid="${p.playerId}" data-pname="${escapeHtml(p.name)}" title="Blochează acest jucător (nu se mai poate înscrie)">⊘</button>`;
       // iconițele de acțiune stau lipite lângă nume, iar statusul de plată rămâne singur, ancorat în dreapta
       const actionIcons = `<span class="prow-icons">${callBtn}${blockBtn}${kickBtn}</span>`;
       const rightGroup = `<span class="prow-right">${paymentBadge(p)}</span>`;
@@ -1355,6 +1348,25 @@
     doRsvp('leave');
   });
 
+  // ---- Modal generic de confirmare (Da/Nu) — folosit pentru scoate din listă / blochează / deblochează,
+  // ca sa fie mereu clar ce se intampla, in loc de un simplu al doilea click ----
+  let confirmModalAction = null;
+  function openConfirmModal(text, onYes){
+    el('confirm-modal-text').innerHTML = text;
+    confirmModalAction = onYes;
+    show('confirm-modal');
+  }
+  function closeConfirmModal(){
+    hide('confirm-modal');
+    confirmModalAction = null;
+  }
+  el('confirm-modal-no').addEventListener('click', closeConfirmModal);
+  el('confirm-modal-yes').addEventListener('click', () => {
+    const action = confirmModalAction;
+    closeConfirmModal();
+    if (action) action();
+  });
+
   function openJoinModal(){
     const pricing = lastMatchData && lastMatchData.pricing;
     el('join-modal-price').textContent = pricing ? formatEuro(pricing.perPlayer) : '';
@@ -1387,7 +1399,7 @@
           <div class="blocked-row-name">${escapeHtml(b.name || '—')}</div>
           <div class="blocked-row-meta">${escapeHtml(b.phone || '—')}</div>
         </div>
-        <button type="button" class="unblock-btn" data-bid="${b.id}">Deblochează</button>
+        <button type="button" class="unblock-btn" data-bid="${b.id}" data-bname="${escapeHtml(b.name || 'acest jucător')}">Deblochează</button>
       </div>
     `).join('');
   }
@@ -1404,26 +1416,29 @@
     if (e.target.id === 'blocked-modal') closeBlockedModal(); // click pe fundal, in afara cardului
   });
 
-  el('blocked-modal-list').addEventListener('click', async (e) => {
+  el('blocked-modal-list').addEventListener('click', (e) => {
     const btn = e.target.closest('.unblock-btn');
     if (!btn) return;
     const blockedId = btn.dataset.bid;
-    btn.disabled = true;
-    btn.textContent = 'Se deblochează...';
-    try {
-      const data = await api(API.unblock, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ token: currentToken, blockedId }),
-      });
-      renderMatch(data);
-      renderBlockedModalList(data.blocked || []);
-    } catch (err) {
-      el('rsvp-error').textContent = err.message;
-      show('rsvp-error');
-      btn.disabled = false;
-      btn.textContent = 'Deblochează';
-    }
+    const name = escapeHtml(btn.dataset.bname || 'acest jucător');
+    openConfirmModal(`Ești sigur că vrei să deblochezi pe <b>${name}</b>? Se va putea înscrie din nou.`, async () => {
+      btn.disabled = true;
+      btn.textContent = 'Se deblochează...';
+      try {
+        const data = await api(API.unblock, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ token: currentToken, blockedId }),
+        });
+        renderMatch(data);
+        renderBlockedModalList(data.blocked || []);
+      } catch (err) {
+        el('rsvp-error').textContent = err.message;
+        show('rsvp-error');
+        btn.disabled = false;
+        btn.textContent = 'Deblochează';
+      }
+    });
   });
 
   async function doRsvp(action, payment){
@@ -1469,57 +1484,45 @@
   el('btn-change-cash').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
 
   // ---- Controale admin (doar cei 3 recunoscuti dupa telefon): scoate din listă + blochează + marchează cash încasat ----
-  // Foloseste un tipar "apasă de 2 ori ca să confirmi" în loc de confirm() nativ, ca să nu blocheze pagina.
+  // Apasarea deschide un modal de confirmare (Da/Nu) — nu se intampla nimic pana nu se apasa "Da".
   document.addEventListener('click', async (e) => {
     const kickBtn = e.target.closest('.kick-btn');
     if (kickBtn) {
       const pid = kickBtn.dataset.pid;
-      if (armedKick !== pid) {
-        armedKick = pid;
-        clearTimeout(armedKickTimer);
-        armedKickTimer = setTimeout(() => { armedKick = null; if (lastMatchData) renderMatch(lastMatchData); }, 4000);
-        if (lastMatchData) renderMatch(lastMatchData);
-        return;
-      }
-      clearTimeout(armedKickTimer);
-      armedKick = null;
-      try {
-        const data = await api(API.kick, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ token: currentToken, playerId: pid }),
-        });
-        renderMatch(data);
-      } catch (err) {
-        el('rsvp-error').textContent = err.message;
-        show('rsvp-error');
-      }
+      const name = escapeHtml(kickBtn.dataset.pname || 'acest jucător');
+      openConfirmModal(`Ești sigur că vrei să scoți din listă pe <b>${name}</b>?`, async () => {
+        try {
+          const data = await api(API.kick, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ token: currentToken, playerId: pid }),
+          });
+          renderMatch(data);
+        } catch (err) {
+          el('rsvp-error').textContent = err.message;
+          show('rsvp-error');
+        }
+      });
       return;
     }
 
     const blockBtn = e.target.closest('.block-btn');
     if (blockBtn) {
       const pid = blockBtn.dataset.pid;
-      if (armedBlock !== pid) {
-        armedBlock = pid;
-        clearTimeout(armedBlockTimer);
-        armedBlockTimer = setTimeout(() => { armedBlock = null; if (lastMatchData) renderMatch(lastMatchData); }, 4000);
-        if (lastMatchData) renderMatch(lastMatchData);
-        return;
-      }
-      clearTimeout(armedBlockTimer);
-      armedBlock = null;
-      try {
-        const data = await api(API.block, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ token: currentToken, playerId: pid }),
-        });
-        renderMatch(data);
-      } catch (err) {
-        el('rsvp-error').textContent = err.message;
-        show('rsvp-error');
-      }
+      const name = escapeHtml(blockBtn.dataset.pname || 'acest jucător');
+      openConfirmModal(`Ești sigur că vrei să blochezi pe <b>${name}</b>? Nu se va mai putea înscrie ulterior.`, async () => {
+        try {
+          const data = await api(API.block, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ token: currentToken, playerId: pid }),
+          });
+          renderMatch(data);
+        } catch (err) {
+          el('rsvp-error').textContent = err.message;
+          show('rsvp-error');
+        }
+      });
       return;
     }
 
