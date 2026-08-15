@@ -293,7 +293,7 @@ function buildICS(match, pricing) {
     `DTSTAMP:${icsDate(new Date())}`,
     `DTSTART:${icsDate(start)}`,
     `DTEND:${icsDate(end)}`,
-    'SUMMARY:⚽ Fotbal Vineri',
+    'SUMMARY:Vineri - Seară de Fotbal ⚽',
     `LOCATION:${escapeICS(match.location)}`,
     `GEO:${match.lat};${match.lon}`,
     `X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=${escapeICS(match.location)};X-APPLE-RADIUS=100;X-TITLE=${escapeICS(match.location)}:geo:${match.lat},${match.lon}`,
