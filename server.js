@@ -32,12 +32,12 @@ const STATIC_FILES = {
 };
 
 const DEFAULT_CONFIG = {
-  location: "O'Hanlon Park, Celbridge",
+  location: 'Celbridge Golf Range, Celbridge, Co. Kildare',
   time: '19:00',
   defaultCapacity: 15,
   revtag: 'sbnn3',
-  lat: 53.3399,
-  lon: -6.5406,
+  lat: 53.33907,
+  lon: -6.50912,
   // Pretul per jucator NU e un camp separat — se calculeaza automat din pragul de pret (cost
   // total / nr. de jucatori al pragului respectiv), NU din cati sunt confirmati acum in
   // saptamana curenta (altfel ar arata sume ciudate cat timp lista se umple, ex. 17€ la 3
