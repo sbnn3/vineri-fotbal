@@ -38,11 +38,10 @@ const DEFAULT_CONFIG = {
   revtag: 'sbnn3',
   lat: 53.3399,
   lon: -6.5406,
-  // Pretul per jucator e FIX (nu se recalculeaza in functie de cati sunt confirmati acum in
-  // saptamana curenta — altfel ar arata sume ciudate cat timp lista se umple, ex. 17€ la 3
-  // confirmati). Doar durata meciului (si costul total, informativ) difera dupa cate praguri
-  // de jucatori se ating pana vineri.
-  pricePerPlayer: 5,
+  // Pretul per jucator NU e un camp separat — se calculeaza automat din pragul de pret (cost
+  // total / nr. de jucatori al pragului respectiv), NU din cati sunt confirmati acum in
+  // saptamana curenta (altfel ar arata sume ciudate cat timp lista se umple, ex. 17€ la 3
+  // confirmati). Pragul se alege dupa capacitatea saptamanii (vezi computePricing).
   priceTiers: [
     { minPlayers: 15, totalCost: 70, hours: 2 },   // 3 echipe x 5, 2 ore
     { minPlayers: 10, totalCost: 50, hours: 1.5 }, // 2 echipe x 5, 1.5 ore
@@ -221,18 +220,22 @@ function pickHourlyWeather(json, dateISO, time) {
   };
 }
 
-// ---------- Pretul terenului (per jucator e FIX; doar ora/costul total difera pe praguri) ----------
+// ---------- Pretul terenului (impartire automata: cost total / nr. jucatori al pragului) ----------
 // Pragul (10 sau 15 jucatori) se alege dupa CAPACITATEA meciului setata din admin pentru
 // saptamana respectiva (cati jucatori s-a decis ca se joaca), NU dupa cati s-au confirmat pana
 // acum — altfel ar arata info gresita cat timp lista se umple (ex. sondaj deschis pentru 15,
 // dar cu doar 3 confirmati ar aparea starea "10 jucatori").
-function computePricing(tiers, capacity, pricePerPlayer) {
+// Pretul per jucator NU e un camp separat, se calculeaza automat: totalCost / minPlayers al
+// pragului ales (ex: 50€ / 10 jucatori = 5€; 70€ / 15 jucatori = 4,67€ -> rotunjit in sus la
+// 0,5€, ca suma stransa de la toti jucatorii sa acopere mereu tot costul terenului).
+function computePricing(tiers, capacity) {
   const list = (Array.isArray(tiers) && tiers.length ? tiers : DEFAULT_CONFIG.priceTiers)
     .slice()
     .sort((a, b) => b.minPlayers - a.minPlayers);
   if (!list.length) return null;
   const tier = list.find((t) => capacity >= t.minPlayers) || list[list.length - 1];
-  const perPlayer = pricePerPlayer != null ? pricePerPlayer : DEFAULT_CONFIG.pricePerPlayer;
+  const rawPerPlayer = tier.totalCost / tier.minPlayers;
+  const perPlayer = Math.ceil(rawPerPlayer / 0.5) * 0.5;
   return { totalCost: tier.totalCost, hours: tier.hours, minPlayers: tier.minPlayers, perPlayer };
 }
 
@@ -328,7 +331,6 @@ async function getOrCreateCurrentMatch(data) {
       lat: data.config.lat,
       lon: data.config.lon,
       priceTiers: (data.config.priceTiers || DEFAULT_CONFIG.priceTiers).map((t) => Object.assign({}, t)),
-      pricePerPlayer: data.config.pricePerPlayer != null ? data.config.pricePerPlayer : DEFAULT_CONFIG.pricePerPlayer,
       status: 'open', // open | cancelled
       createdAt: new Date().toISOString(),
     };
@@ -342,10 +344,8 @@ async function getOrCreateCurrentMatch(data) {
   if (!match.priceTiers || !match.priceTiers.length) {
     match.priceTiers = (data.config.priceTiers || DEFAULT_CONFIG.priceTiers).map((t) => Object.assign({}, t));
   }
-  if (match.pricePerPlayer == null) {
-    match.pricePerPlayer = data.config.pricePerPlayer != null ? data.config.pricePerPlayer : DEFAULT_CONFIG.pricePerPlayer;
-  }
-  delete match.price; // camp vechi, inlocuit de priceTiers/pricePerPlayer
+  delete match.price; // camp vechi, inlocuit de priceTiers (pretul per jucator se calculeaza automat)
+  delete match.pricePerPlayer; // camp vechi — pretul per jucator nu mai e setat manual, se calculeaza automat
   return match;
 }
 
@@ -395,12 +395,11 @@ function matchView(data, match, token) {
       capacity: match.capacity,
       revtag: match.revtag,
       priceTiers: match.priceTiers,
-      pricePerPlayer: match.pricePerPlayer,
       lat: match.lat,
       lon: match.lon,
       status: match.status,
     },
-    pricing: computePricing(match.priceTiers, match.capacity, match.pricePerPlayer),
+    pricing: computePricing(match.priceTiers, match.capacity),
     isAdmin,
     myStatus,
     myPayment,
@@ -665,9 +664,6 @@ const server = http.createServer(async (req, res) => {
       if (body.status && ['open', 'cancelled'].includes(body.status)) match.status = body.status;
       if (body.lat !== undefined && body.lat !== '' && !Number.isNaN(Number(body.lat))) match.lat = Number(body.lat);
       if (body.lon !== undefined && body.lon !== '' && !Number.isNaN(Number(body.lon))) match.lon = Number(body.lon);
-      if (body.pricePerPlayer !== undefined && body.pricePerPlayer !== '' && !Number.isNaN(Number(body.pricePerPlayer))) {
-        match.pricePerPlayer = Math.max(0, Number(body.pricePerPlayer));
-      }
       if (body.priceTiers !== undefined) {
         if (!Array.isArray(body.priceTiers)) return sendJSON(res, 400, { error: 'Praguri de pret invalide.' });
         const cleaned = body.priceTiers
@@ -717,7 +713,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/calendar.ics' && req.method === 'GET') {
       const data = getData();
       const match = await getOrCreateCurrentMatch(data);
-      const pricing = computePricing(match.priceTiers, match.capacity, match.pricePerPlayer);
+      const pricing = computePricing(match.priceTiers, match.capacity);
       const ics = buildICS(match, pricing);
       res.writeHead(200, {
         'Content-Type': 'text/calendar; charset=utf-8',
