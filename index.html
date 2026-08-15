@@ -725,11 +725,17 @@
     white-space:nowrap;
   }
   li.me span.pname{ color:var(--gold); }
-  /* ---- Grup dreapta: icoane admin + status plata, mereu lipite intre ele, ancorate la marginea din dreapta ---- */
-  .prow-right{
+  /* ---- Icoanele de actiune (apel/blocare/kick) stau lipite de nume, nu impinse in dreapta ---- */
+  .prow-icons{
     display:flex;
     align-items:center;
     gap:6px;
+    flex-shrink:0;
+  }
+  /* ---- Statusul de plata (Revolut/Cash) e singurul ancorat la marginea din dreapta ---- */
+  .prow-right{
+    display:flex;
+    align-items:center;
     margin-left:auto;
     padding-left:8px;
     flex-shrink:0;
@@ -1239,10 +1245,10 @@
       const blockBtn = isSelf
         ? ''
         : `<button type="button" class="block-btn ${armedB ? 'armed' : ''}" data-pid="${p.playerId}" title="${armedB ? 'Apasă din nou ca să confirmi blocarea' : 'Blochează acest jucător (nu se mai poate înscrie)'}">${armedB ? '⚠' : '⊘'}</button>`;
-      // toate iconițele + eticheta de plată stau grupate, lipite, ancorate la marginea din dreapta —
-      // nu mai rămân "orfane" la distanță de nume, indiferent cât de scurt/lung e numele
-      const rightGroup = `<span class="prow-right">${callBtn}${blockBtn}${kickBtn}${paymentBadge(p)}</span>`;
-      return `<li class="${isMe ? 'me' : ''}">${identity}${rightGroup}</li>`;
+      // iconițele de acțiune stau lipite lângă nume, iar statusul de plată rămâne singur, ancorat în dreapta
+      const actionIcons = `<span class="prow-icons">${callBtn}${blockBtn}${kickBtn}</span>`;
+      const rightGroup = `<span class="prow-right">${paymentBadge(p)}</span>`;
+      return `<li class="${isMe ? 'me' : ''}">${identity}${actionIcons}${rightGroup}</li>`;
     }
     return `<li class="${isMe ? 'me' : ''}">${identity}<span class="prow-right">${paymentBadge(p)}</span></li>`;
   }
