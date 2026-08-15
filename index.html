@@ -920,7 +920,7 @@
       el('pay-price-2').textContent = priceText;
       el('btn-revolut').href = `https://revolut.me/${encodeURIComponent(m.revtag || 'sbnn3')}`;
       el('pay-total-note').textContent =
-        `Cost total teren: ${formatEuro(data.pricing.totalCost)} / ${formatHours(data.pricing.hours)}, la ${data.confirmedCount} jucători.`;
+        `Cost total teren: ${formatEuro(data.pricing.totalCost)} / ${formatHours(data.pricing.hours)}, la ${data.pricing.minPlayers} jucători.`;
 
       const myPayment = data.myPayment || null;
       el('payment-choice').classList.toggle('hidden', myPayment !== null);
