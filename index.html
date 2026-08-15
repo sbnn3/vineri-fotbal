@@ -717,14 +717,43 @@
     background:linear-gradient(160deg, var(--amber), #c9852a);
   }
   li.me .jersey{ box-shadow:0 0 0 2px var(--pitch-0), 0 0 0 4px var(--gold); }
+  /* ---- Grup nume + eticheta de rol (Administrator/Moderator) — eticheta sta SUB nume, nu langa el,
+     ca sa nu ii fure numelui spatiul orizontal (pe ecrane inguste, alaturi de 3 iconite, numele
+     disparea aproape complet daca eticheta era pe acelasi rand) ---- */
+  .pname-group{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:1px;
+    min-width:0;
+    flex:0 1 auto;
+  }
   .pname{
     flex:0 1 auto;
     min-width:0;
+    max-width:100%;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
   }
   li.me span.pname{ color:var(--gold); }
+  .role-tag{
+    align-self:flex-start;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:1px 5px;
+    border-radius:5px;
+    line-height:1.4;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    box-sizing:border-box;
+  }
+  .role-tag-admin{ background:rgba(242,169,59,0.16); color:var(--amber); border:1px solid rgba(242,169,59,0.35); }
+  .role-tag-mod{ background:rgba(255,255,255,0.08); color:var(--muted); border:1px solid rgba(255,255,255,0.16); }
   /* ---- Icoanele de actiune (apel/blocare/kick) stau lipite de nume, nu impinse in dreapta ---- */
   .prow-icons{
     display:flex;
@@ -1228,21 +1257,33 @@
     return '';
   }
 
+  function roleTagHtml(role){
+    // eticheta sta pe un rand separat, sub nume (vezi .pname-group), asa ca textul intreg
+    // incape aproape mereu; daca spatiul e totusi foarte stramt, se trunchiaza elegant cu "…"
+    if (role === 'admin') return '<span class="role-tag role-tag-admin">Administrator</span>';
+    if (role === 'moderator') return '<span class="role-tag role-tag-mod">Moderator</span>';
+    return '';
+  }
+
   function squadRowHtml(p, i, benched, isMe){
     const jerseyClass = benched ? 'jersey bench' : 'jersey';
-    // identitate: numarul + numele, lipite intre ele in stanga randului
-    const identity = `<span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>`;
+    // identitate: numarul + numele (+ eticheta de rol, doar in fata admin-ilor), lipite intre ele in stanga randului
+    const identity = `<span class="${jerseyClass}">${i+1}</span><span class="pname-group"><span class="pname">${escapeHtml(p.name)}</span>${roleTagHtml(p.role)}</span>`;
     if (isAdminView && p.playerId) {
       const callBtn = p.phone
         ? `<a href="tel:${escapeHtml(p.phone)}" class="call-btn" title="Sună pe ${escapeHtml(p.name)}">📞</a>`
         : '';
       const isSelf = p.playerId === currentToken;
+      // contul Administratorului (rolul 'admin') e protejat integral — nimeni, nici ceilalti admini,
+      // nu are voie sa-l scoata din lista sau sa-l blocheze, asa ca ii ascundem butoanele astea oricui
+      const isProtected = p.role === 'admin';
+      const hideDestructive = isSelf || isProtected;
       const armed = armedKick === p.playerId;
-      const kickBtn = isSelf
+      const kickBtn = hideDestructive
         ? ''
         : `<button type="button" class="kick-btn ${armed ? 'armed' : ''}" data-pid="${p.playerId}" title="${armed ? 'Apasă din nou ca să confirmi' : 'Scoate din listă'}">${armed ? '⚠' : '✕'}</button>`;
       const armedB = armedBlock === p.playerId;
-      const blockBtn = isSelf
+      const blockBtn = hideDestructive
         ? ''
         : `<button type="button" class="block-btn ${armedB ? 'armed' : ''}" data-pid="${p.playerId}" title="${armedB ? 'Apasă din nou ca să confirmi blocarea' : 'Blochează acest jucător (nu se mai poate înscrie)'}">${armedB ? '⚠' : '⊘'}</button>`;
       // iconițele de acțiune stau lipite lângă nume, iar statusul de plată rămâne singur, ancorat în dreapta

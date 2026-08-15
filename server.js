@@ -157,16 +157,31 @@ function normalizePhone(phone) {
 // Cei 3 organizatori din grup: cand se inregistreaza/recupereaza contul cu unul din aceste
 // numere, primesc controale suplimentare direct pe ecranul principal (scoate jucator, suna,
 // marcheaza cash incasat). Poate fi schimbat fara redeploy prin variabila de mediu ADMIN_PHONES
-// (numere separate prin virgula).
+// (numere separate prin virgula) — PRIMUL numar din lista e "Administratorul" (contul proprietarului,
+// protejat integral — nimeni, nici ceilalti admini, nu poate sa-l scoata sau sa-l blocheze), restul
+// sunt "Moderatori".
 const DEFAULT_ADMIN_PHONES = ['0894394691', '0873876602', '0874681735'];
-const ADMIN_PHONES = new Set(
-  (process.env.ADMIN_PHONES ? process.env.ADMIN_PHONES.split(',') : DEFAULT_ADMIN_PHONES)
-    .map(normalizePhone)
-    .filter(Boolean)
-);
+const ADMIN_PHONES_ORDERED = (process.env.ADMIN_PHONES ? process.env.ADMIN_PHONES.split(',') : DEFAULT_ADMIN_PHONES)
+  .map(normalizePhone)
+  .filter(Boolean);
+const ADMIN_PHONES = new Set(ADMIN_PHONES_ORDERED);
+const PROTECTED_ADMIN_PHONE = ADMIN_PHONES_ORDERED[0] || null;
 
 function isAdminPhone(phone) {
   return ADMIN_PHONES.has(normalizePhone(phone));
+}
+
+// 'admin' = contul protejat (primul numar din lista), 'moderator' = ceilalti admini, null = jucator normal
+function getAdminRole(phone) {
+  const norm = normalizePhone(phone);
+  if (!norm) return null;
+  if (PROTECTED_ADMIN_PHONE && norm === PROTECTED_ADMIN_PHONE) return 'admin';
+  return ADMIN_PHONES.has(norm) ? 'moderator' : null;
+}
+
+// contul Administratorului: nimeni (nici ceilalti admini) nu are voie sa-l scoata din lista sau sa-l blocheze
+function isProtectedAdmin(phone) {
+  return Boolean(PROTECTED_ADMIN_PHONE) && normalizePhone(phone) === PROTECTED_ADMIN_PHONE;
 }
 
 // ---------- Vremea (Open-Meteo, fara cheie API) ----------
@@ -367,11 +382,12 @@ function matchView(data, match, token) {
   const mapEntry = (r) => {
     const p = data.players.find((pl) => pl.id === r.playerId);
     const base = { name: p ? p.name : 'Jucator', payment: r.payment || null };
-    // numarul de telefon, id-ul jucatorului si statusul platii apar doar pentru cei 3 admini
+    // numarul de telefon, id-ul jucatorului, statusul platii si rolul de admin/moderator apar doar pentru cei 3 admini
     if (isAdmin) {
       base.playerId = r.playerId;
       base.phone = p ? p.phone : null;
       base.paid = Boolean(r.paid);
+      base.role = getAdminRole(p ? p.phone : null);
     }
     return base;
   };
@@ -641,6 +657,12 @@ const server = http.createServer(async (req, res) => {
       const requester = data.players.find((p) => p.id === token);
       if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
 
+      // contul Administratorului e protejat integral — nimeni, nici ceilalti admini, nu il poate scoate din lista
+      const kickTarget = data.players.find((p) => p.id === targetId);
+      if (kickTarget && isProtectedAdmin(kickTarget.phone)) {
+        return sendJSON(res, 403, { error: 'Acest cont este protejat — nu poate fi scos din listă de nimeni.' });
+      }
+
       const match = await getOrCreateCurrentMatch(data);
       cancelParticipant(data, match, targetId);
       await persist(data);
@@ -660,6 +682,11 @@ const server = http.createServer(async (req, res) => {
 
       const target = data.players.find((p) => p.id === targetId);
       if (!target) return sendJSON(res, 404, { error: 'Jucator negasit.' });
+
+      // contul Administratorului e protejat integral — nimeni, nici ceilalti admini, nu il poate bloca
+      if (isProtectedAdmin(target.phone)) {
+        return sendJSON(res, 403, { error: 'Acest cont este protejat — nu poate fi blocat de nimeni.' });
+      }
 
       const normPhone = normalizePhone(target.phone);
       if (!isBlocked(data, target.phone, target.name)) {
