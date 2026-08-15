@@ -334,6 +334,18 @@
     color:#ff8a83;
     border:1px solid rgba(240,71,63,0.4);
   }
+  .modal-pay-choice{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .modal-pay-choice .pay-option{ margin-top:0; }
+  .modal-subnote{
+    font-size:12.5px !important;
+    color:var(--muted) !important;
+    font-weight:600;
+    margin:-14px 0 18px !important;
+  }
 
   /* ---- Register form ---- */
   label{
@@ -846,6 +858,17 @@
   </div>
 </div>
 
+<div id="join-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <p id="join-modal-text">Cum vrei să achiți <b id="join-modal-price">5€</b>, costul locului tău?</p>
+    <p class="modal-subnote">Alegi doar metoda — nu trebuie să plătești acum.</p>
+    <div class="modal-pay-choice">
+      <button type="button" id="join-modal-revolut" class="pay-option pay-option-revolut">💙 Plătesc cu Revolut</button>
+      <button type="button" id="join-modal-cash" class="pay-option pay-option-cash">💵 Plătesc cash, după meci</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const API = {
@@ -1113,7 +1136,7 @@
     }
   });
 
-  el('btn-join').addEventListener('click', () => doRsvp('join'));
+  el('btn-join').addEventListener('click', openJoinModal);
   el('btn-leave').addEventListener('click', openLeaveModal);
 
   function openLeaveModal(){
@@ -1130,12 +1153,30 @@
     doRsvp('leave');
   });
 
-  async function doRsvp(action){
+  function openJoinModal(){
+    const pricing = lastMatchData && lastMatchData.pricing;
+    el('join-modal-price').textContent = pricing ? formatEuro(pricing.perPlayer) : '';
+    show('join-modal');
+  }
+  function closeJoinModal(){ hide('join-modal'); }
+
+  el('join-modal-revolut').addEventListener('click', () => {
+    closeJoinModal();
+    doRsvp('join', 'revolut');
+  });
+  el('join-modal-cash').addEventListener('click', () => {
+    closeJoinModal();
+    doRsvp('join', 'cash');
+  });
+
+  async function doRsvp(action, payment){
     try {
+      const body = { token: currentToken, action };
+      if (action === 'join' && payment) body.payment = payment;
       const data = await api(API.rsvp, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({token: currentToken, action}),
+        body: JSON.stringify(body),
       });
       renderMatch(data);
       if (action === 'join') celebrate();

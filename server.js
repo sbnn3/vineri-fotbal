@@ -542,6 +542,8 @@ const server = http.createServer(async (req, res) => {
       let entry = data.rsvps.find((r) => r.matchId === match.id && r.playerId === token);
 
       if (action === 'join') {
+        // metoda de plata se alege in modalul afisat la apasarea "Particip", inainte sa fie pus in lista
+        const chosenPayment = ['revolut', 'cash'].includes(body.payment) ? body.payment : null;
         if (entry && entry.status === 'confirmed') {
           // deja confirmat, nimic de facut
         } else {
@@ -552,7 +554,7 @@ const server = http.createServer(async (req, res) => {
           if (entry) {
             entry.status = newStatus;
             entry.createdAt = new Date().toISOString();
-            entry.payment = null; // participare noua — alege din nou metoda de plata
+            entry.payment = chosenPayment;
             entry.paid = false;
           } else {
             entry = {
@@ -560,7 +562,7 @@ const server = http.createServer(async (req, res) => {
               matchId: match.id,
               playerId: token,
               status: newStatus,
-              payment: null,
+              payment: chosenPayment,
               paid: false,
               createdAt: new Date().toISOString(),
             };
