@@ -225,22 +225,6 @@
   }
   .add-tier-btn:hover{ color:var(--white); border-color:var(--grass); }
 
-  /* ---- Jucatori blocati ---- */
-  .blocked-row{
-    display:flex; align-items:center; gap:10px;
-    background:var(--card-2); border:1px solid var(--card-border); border-radius:12px;
-    padding:10px 12px; margin-bottom:8px;
-  }
-  .blocked-row-info{ flex:1; min-width:0; }
-  .blocked-row-name{ font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .blocked-row-meta{ font-size:11.5px; color:var(--muted); font-weight:600; margin-top:2px; }
-  .unblock-btn{
-    flex-shrink:0; padding:8px 14px; border-radius:10px; border:1px solid rgba(34,197,94,0.4);
-    background:rgba(34,197,94,0.14); color:#5eeba3; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer;
-  }
-  .unblock-btn:active{ transform:translateY(1px); }
-  .unblock-btn:disabled{ opacity:.6; cursor:default; }
-
   /* ---- Danger zone ---- */
   .danger-card{
     border:1px solid rgba(240,71,63,0.35);
@@ -419,13 +403,6 @@
           <p class="card-note">Aplicația alege automat pragul potrivit capacității setate mai sus (nu numărului de confirmați) și împarte automat costul total la numărul de jucători al pragului, rotunjit în sus la 0,5€ — prețul per jucător nu se setează manual.</p>
         </div>
 
-        <div class="card" id="blocked-card">
-          <div class="card-title"><span class="em">🚫</span> Jucători blocați</div>
-          <p class="card-note" style="margin:0 0 14px;">Aici apar jucătorii blocați de cei 3 admini direct din ecranul principal (numărul de telefon și numele nu se mai pot reînregistra). Îi poți debloca oricând.</p>
-          <div id="blocked-list"></div>
-          <p class="card-note" id="blocked-empty">Niciun jucător blocat momentan.</p>
-        </div>
-
         <div class="card danger-card">
           <div class="card-title"><span class="em">⚠️</span> Zonă periculoasă</div>
           <p class="card-note" style="margin:0 0 14px;">Șterge toți participanții și lista de rezervă a meciului curent (jucătorii înregistrați rămân, doar prezența pentru săptămâna asta se golește).</p>
@@ -486,10 +463,6 @@
     const perPlayer = Math.ceil((cost / min) / 0.5) * 0.5;
     return perPlayer;
   }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
   // ---------- Key visibility ----------
   el('key-toggle').addEventListener('click', () => {
     const input = el('key');
@@ -620,58 +593,8 @@
     el('tiers-list').innerHTML = '';
     (data.match.priceTiers || []).forEach(addTierRow);
 
-    renderBlocked(data.blocked || []);
-
     disarmReset();
   }
-
-  // ---------- Jucatori blocati ----------
-  function renderBlocked(list){
-    const listEl = el('blocked-list');
-    const emptyEl = el('blocked-empty');
-    if (!list.length) {
-      listEl.innerHTML = '';
-      emptyEl.style.display = 'block';
-      return;
-    }
-    emptyEl.style.display = 'none';
-    const sorted = list.slice().sort((a, b) => String(b.blockedAt||'').localeCompare(String(a.blockedAt||'')));
-    listEl.innerHTML = sorted.map((b) => {
-      const dateLabel = b.blockedAt ? formatDate(b.blockedAt.slice(0, 10)) : '';
-      return `
-        <div class="blocked-row">
-          <div class="blocked-row-info">
-            <div class="blocked-row-name">${escapeHtml(b.name || '—')}</div>
-            <div class="blocked-row-meta">${escapeHtml(b.phone || '—')}${dateLabel ? ' · blocat ' + dateLabel : ''}</div>
-          </div>
-          <button type="button" class="unblock-btn" data-bid="${b.id}">Deblochează</button>
-        </div>
-      `;
-    }).join('');
-  }
-
-  el('blocked-list').addEventListener('click', async (e) => {
-    const btn = e.target.closest('.unblock-btn');
-    if (!btn) return;
-    const blockedId = btn.dataset.bid;
-    btn.disabled = true;
-    btn.textContent = 'Se deblochează...';
-    try {
-      const res = await fetch('/api/admin/unblock', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({key: currentKey, blockedId}),
-      });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || 'Eroare la deblocare.', 'error'); btn.disabled = false; btn.textContent = 'Deblochează'; return; }
-      showToast('Jucător deblocat ✅', 'ok');
-      renderBlocked(data.blocked || []);
-    } catch (e) {
-      showToast('Nu am putut contacta serverul.', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Deblochează';
-    }
-  });
 
   // ---------- Salvare ----------
   async function save(){

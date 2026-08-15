@@ -347,6 +347,118 @@
     margin:-14px 0 18px !important;
   }
 
+  /* ---- Modal jucatori blocati (doar cei 3 admini) ---- */
+  .blocked-link{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    margin-top:18px;
+    padding:11px 14px;
+    border-radius:12px;
+    background:rgba(242,169,59,0.08);
+    border:1px solid rgba(242,169,59,0.3);
+    color:var(--amber);
+    font-family:inherit;
+    font-weight:700;
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .blocked-link:active{ transform:translateY(1px); }
+  .blocked-count-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:20px;
+    height:20px;
+    padding:0 6px;
+    border-radius:999px;
+    background:var(--amber);
+    color:#04150d;
+    font-size:11.5px;
+    font-weight:800;
+  }
+  .modal-box.modal-box-wide{
+    max-width:400px;
+    text-align:left;
+  }
+  .blocked-modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .blocked-modal-head p{
+    margin:0;
+    font-size:16px;
+    font-weight:700;
+    color:var(--white);
+  }
+  .modal-close-x{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-size:24px;
+    line-height:1;
+    cursor:pointer;
+    padding:2px 8px;
+    border-radius:8px;
+    width:auto;
+    margin-top:0;
+    text-transform:none;
+    letter-spacing:normal;
+    font-weight:400;
+  }
+  .modal-close-x:hover{ background:rgba(255,255,255,0.06); }
+  .blocked-modal-list{
+    max-height:50vh;
+    overflow-y:auto;
+  }
+  .blocked-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    padding:10px 12px;
+    margin-bottom:8px;
+  }
+  .blocked-row:last-child{ margin-bottom:0; }
+  .blocked-row-info{ flex:1; min-width:0; }
+  .blocked-row-name{
+    font-weight:700;
+    font-size:14px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .blocked-row-meta{
+    font-size:11.5px;
+    color:var(--muted);
+    font-weight:600;
+    margin-top:2px;
+  }
+  .unblock-btn{
+    flex-shrink:0;
+    width:auto;
+    margin-top:0;
+    text-transform:none;
+    letter-spacing:normal;
+    padding:8px 14px;
+    border-radius:10px;
+    border:1px solid rgba(34,197,94,0.4);
+    background:rgba(34,197,94,0.14);
+    color:#5eeba3;
+    font-family:inherit;
+    font-weight:700;
+    font-size:12.5px;
+    cursor:pointer;
+  }
+  .unblock-btn:active{ transform:translateY(1px); }
+  .unblock-btn:disabled{ opacity:.6; cursor:default; }
+
   /* ---- Register form ---- */
   label{
     display:block;
@@ -391,11 +503,9 @@
     animation: rise .4s ease both;
   }
   .payment-box .ptitle{
-    display:flex;
-    align-items:center;
-    gap:8px;
     font-weight:700;
     font-size:14px;
+    line-height:1.5;
     color:var(--gold);
     letter-spacing:.02em;
   }
@@ -584,7 +694,7 @@
   ol.squad li{
     display:flex;
     align-items:center;
-    gap:12px;
+    gap:clamp(6px, 2.4vw, 12px);
     padding:9px 4px;
     border-bottom:1px solid var(--line);
     font-size:15.5px;
@@ -607,6 +717,13 @@
     background:linear-gradient(160deg, var(--amber), #c9852a);
   }
   li.me .jersey{ box-shadow:0 0 0 2px var(--pitch-0), 0 0 0 4px var(--gold); }
+  .pname{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
   li.me span.pname{ color:var(--gold); }
   .pay-badge{
     margin-left:auto;
@@ -656,7 +773,7 @@
     color:var(--amber);
     border:1px solid rgba(242,169,59,0.4);
     display:flex; align-items:center; justify-content:center;
-    font-size:11px;
+    font-size:12px;
     font-weight:700;
     padding:0;
     line-height:1;
@@ -846,6 +963,8 @@
         <a href="#" id="btn-maps" class="btn-maps" target="_blank" rel="noopener">Deschide în Google Maps ↗</a>
       </div>
 
+      <button type="button" id="btn-open-blocked" class="blocked-link hidden">🚫 Jucători blocați <span id="blocked-count" class="blocked-count-badge">0</span></button>
+
       <div class="section-title starters"><span class="dot"></span>Titulari</div>
       <ol class="squad" id="confirmed-list"></ol>
       <p class="empty hidden" id="confirmed-empty">Niciun jucător confirmat încă.</p>
@@ -887,6 +1006,17 @@
   </div>
 </div>
 
+<div id="blocked-modal" class="modal-overlay hidden">
+  <div class="modal-box modal-box-wide">
+    <div class="blocked-modal-head">
+      <p>🚫 Jucători blocați</p>
+      <button type="button" id="blocked-modal-close" class="modal-close-x" aria-label="Închide">×</button>
+    </div>
+    <div class="blocked-modal-list" id="blocked-modal-list"></div>
+    <p class="empty" id="blocked-modal-empty">Niciun jucător blocat momentan.</p>
+  </div>
+</div>
+
 <script>
 (function(){
   const API = {
@@ -899,6 +1029,7 @@
     kick: '/api/admin/kick',
     markPaid: '/api/admin/mark-paid',
     block: '/api/admin/block',
+    unblock: '/api/admin/unblock',
   };
 
   function formatEuro(n){
@@ -1009,6 +1140,8 @@
   function renderMatch(data){
     lastMatchData = data;
     isAdminView = Boolean(data.isAdmin);
+    el('btn-open-blocked').classList.toggle('hidden', !isAdminView);
+    if (isAdminView) el('blocked-count').textContent = (data.blocked || []).length;
     const m = data.match;
     const { zi, text } = formatDateParts(m.date);
     el('match-day').textContent = zi.toUpperCase();
@@ -1110,7 +1243,7 @@
       const armedB = armedBlock === p.playerId;
       const blockBtn = isSelf
         ? ''
-        : `<button type="button" class="block-btn ${armedB ? 'armed' : ''}" data-pid="${p.playerId}" title="${armedB ? 'Apasă din nou ca să confirmi blocarea' : 'Blochează acest jucător (nu se mai poate înscrie)'}">${armedB ? '⚠' : '🚫'}</button>`;
+        : `<button type="button" class="block-btn ${armedB ? 'armed' : ''}" data-pid="${p.playerId}" title="${armedB ? 'Apasă din nou ca să confirmi blocarea' : 'Blochează acest jucător (nu se mai poate înscrie)'}">${armedB ? '⚠' : '⊘'}</button>`;
       adminBits = blockBtn + kickBtn + `<span class="${jerseyClass}">${i+1}</span><span class="pname">${escapeHtml(p.name)}</span>${callBtn}`;
       return `<li class="${isMe ? 'me' : ''}">${adminBits}${paymentBadge(p)}</li>`;
     }
@@ -1192,6 +1325,61 @@
   el('join-modal-cash').addEventListener('click', () => {
     closeJoinModal();
     doRsvp('join', 'cash');
+  });
+
+  // ---- Modal jucători blocați (doar cei 3 admini recunoscuți după telefon) ----
+  function renderBlockedModalList(list){
+    const wrap = el('blocked-modal-list');
+    if (!list || !list.length) {
+      wrap.innerHTML = '';
+      show('blocked-modal-empty');
+      return;
+    }
+    hide('blocked-modal-empty');
+    const sorted = list.slice().sort((a, b) => String(b.blockedAt || '').localeCompare(String(a.blockedAt || '')));
+    wrap.innerHTML = sorted.map((b) => `
+      <div class="blocked-row">
+        <div class="blocked-row-info">
+          <div class="blocked-row-name">${escapeHtml(b.name || '—')}</div>
+          <div class="blocked-row-meta">${escapeHtml(b.phone || '—')}</div>
+        </div>
+        <button type="button" class="unblock-btn" data-bid="${b.id}">Deblochează</button>
+      </div>
+    `).join('');
+  }
+
+  function openBlockedModal(){
+    renderBlockedModalList((lastMatchData && lastMatchData.blocked) || []);
+    show('blocked-modal');
+  }
+  function closeBlockedModal(){ hide('blocked-modal'); }
+
+  el('btn-open-blocked').addEventListener('click', openBlockedModal);
+  el('blocked-modal-close').addEventListener('click', closeBlockedModal);
+  el('blocked-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'blocked-modal') closeBlockedModal(); // click pe fundal, in afara cardului
+  });
+
+  el('blocked-modal-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.unblock-btn');
+    if (!btn) return;
+    const blockedId = btn.dataset.bid;
+    btn.disabled = true;
+    btn.textContent = 'Se deblochează...';
+    try {
+      const data = await api(API.unblock, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ token: currentToken, blockedId }),
+      });
+      renderMatch(data);
+      renderBlockedModalList(data.blocked || []);
+    } catch (err) {
+      el('rsvp-error').textContent = err.message;
+      show('rsvp-error');
+      btn.disabled = false;
+      btn.textContent = 'Deblochează';
+    }
   });
 
   async function doRsvp(action, payment){

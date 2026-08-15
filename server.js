@@ -416,6 +416,7 @@ function matchView(data, match, token) {
     waitlist,
     confirmedCount: confirmed.length,
     spotsLeft: Math.max(0, match.capacity - confirmed.length),
+    blocked: isAdmin ? data.blocked : undefined, // lista de blocati, vizibila doar celor 3 admini recunoscuti dupa telefon
   };
 }
 
@@ -677,6 +678,23 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, matchView(data, match, token));
     }
 
+    // ---- API: deblocheaza un jucator blocat anterior (doar cei 3 admini recunoscuti dupa telefon) ----
+    if (pathname === '/api/admin/unblock' && req.method === 'POST') {
+      const body = await readBody(req);
+      const token = body.token;
+      const blockedId = body.blockedId;
+      if (!token || !blockedId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
+      const data = getData();
+      const requester = data.players.find((p) => p.id === token);
+      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+
+      data.blocked = (data.blocked || []).filter((b) => b.id !== blockedId);
+
+      const match = await getOrCreateCurrentMatch(data);
+      await persist(data);
+      return sendJSON(res, 200, matchView(data, match, token));
+    }
+
     // ---- API: marcheaza plata cash ca incasata / neincasata (doar cei 3 admini recunoscuti dupa telefon) ----
     if (pathname === '/api/admin/mark-paid' && req.method === 'POST') {
       const body = await readBody(req);
@@ -707,29 +725,12 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, matchView(data, match, null));
     }
 
-    // ---- API ADMIN: deblocheaza un jucator blocat anterior (necesita cheie) ----
-    if (pathname === '/api/admin/unblock' && req.method === 'POST') {
-      const body = await readBody(req);
-      if (body.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
-      const data = getData();
-      const blockedId = body.blockedId;
-      if (!blockedId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
-      data.blocked = (data.blocked || []).filter((b) => b.id !== blockedId);
-      await persist(data);
-      const match = await getOrCreateCurrentMatch(data);
-      const view = matchView(data, match, null);
-      view.blocked = data.blocked;
-      return sendJSON(res, 200, view);
-    }
-
     // ---- API ADMIN: vezi/editeaza meciul curent (necesita cheie) ----
     if (pathname === '/api/admin/match' && req.method === 'GET') {
       if (parsed.query.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
       const data = getData();
       const match = await getOrCreateCurrentMatch(data);
-      const view = matchView(data, match, null);
-      view.blocked = data.blocked; // vizibil doar aici, in panoul protejat cu ADMIN_KEY
-      return sendJSON(res, 200, view);
+      return sendJSON(res, 200, matchView(data, match, null));
     }
 
     if (pathname === '/api/admin/match' && req.method === 'POST') {
@@ -772,9 +773,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       await persist(data);
-      const view = matchView(data, match, null);
-      view.blocked = data.blocked;
-      return sendJSON(res, 200, view);
+      return sendJSON(res, 200, matchView(data, match, null));
     }
 
     // ---- API: vremea pentru meciul curent (Open-Meteo, fara cheie) ----
