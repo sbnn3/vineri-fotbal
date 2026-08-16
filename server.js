@@ -813,6 +813,27 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { ok: true });
     }
 
+    // ---- API ADMIN: sterge definitiv un jucator inregistrat (profil de test, duplicat etc.) —
+    // necesita cheie. Il scoate complet din baza (data.players), din lista de admini daca era acolo,
+    // si din toate participarile lui (data.rsvps, inclusiv meciul curent daca era inscris) — dispare
+    // de peste tot, nu doar din meciul saptamanii asta. Fondatorul nu poate fi sters de aici, e fixat
+    // prin PROTECTED_ADMIN_PHONE (aceeasi protectie ca la kick/block/remove-admin).
+    if (pathname === '/api/admin/delete-player' && req.method === 'POST') {
+      const body = await readBody(req);
+      if (body.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
+      const phone = normalizePhone(body.phone);
+      if (!phone) return sendJSON(res, 400, { error: 'Numar de telefon invalid.' });
+      if (phone === PROTECTED_ADMIN_PHONE) return sendJSON(res, 400, { error: 'Contul de Fondator nu poate fi șters.' });
+      const data = getData();
+      const player = findPlayerByPhone(data, phone);
+      if (!player) return sendJSON(res, 404, { error: 'Nu exista niciun jucator inregistrat cu acest numar.' });
+      data.players = data.players.filter((p) => p.id !== player.id);
+      data.admins = (data.admins || []).filter((a) => a.phone !== phone);
+      data.rsvps = data.rsvps.filter((r) => r.playerId !== player.id);
+      await persist(data);
+      return sendJSON(res, 200, { ok: true });
+    }
+
     // ---- API ADMIN: reseteaza lista de participanti a meciului curent (necesita cheie) ----
     if (pathname === '/api/admin/reset' && req.method === 'POST') {
       const body = await readBody(req);

@@ -239,7 +239,8 @@
     flex-shrink:0; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
     padding:4px 9px; border-radius:999px; white-space:nowrap;
   }
-  .role-chip-founder{ background:linear-gradient(135deg, rgba(244,196,48,0.24), rgba(242,169,59,0.14)); color:var(--gold); border:1px solid rgba(244,196,48,0.5); }
+  /* Fondator: violet, distinct de amber-ul folosit la Administrator, ca sa nu se mai confunde din priviri */
+  .role-chip-founder{ background:linear-gradient(135deg, rgba(167,139,250,0.3), rgba(124,58,237,0.16)); color:#c9b8ff; border:1px solid rgba(167,139,250,0.6); }
   .role-chip-admin{ background:rgba(242,169,59,0.16); color:var(--amber); border:1px solid rgba(242,169,59,0.35); }
   .admin-toggle-btn{
     flex-shrink:0; padding:8px 12px; border-radius:9px; border:1px solid var(--card-border);
@@ -252,6 +253,27 @@
   .admin-toggle-btn:disabled{ opacity:.6; cursor:default; }
   .admins-empty{ font-size:13px; color:var(--muted); font-weight:600; padding:8px 0; }
   .admin-founder-fixed{ font-size:11.5px; color:var(--muted); font-weight:700; flex-shrink:0; }
+  /* ---- Sterge definitiv un jucator din baza (profiluri de test, duplicate etc.) ---- */
+  .admin-delete-btn{
+    flex-shrink:0; width:34px; height:34px; border-radius:9px; border:1px solid rgba(240,71,63,0.35);
+    background:var(--card-2); color:#ff8a83; font-size:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .admin-delete-btn:active{ transform:translateY(1px); }
+  .admin-delete-confirm{
+    flex-basis:100%; display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+    margin-top:2px; padding:9px 10px; border-radius:9px;
+    background:rgba(240,71,63,0.1); border:1px solid rgba(240,71,63,0.3);
+  }
+  .admin-delete-confirm span{ font-size:12.5px; font-weight:700; color:#ffb4af; flex:1 1 auto; min-width:120px; }
+  .admin-delete-yes{
+    padding:7px 12px; border-radius:8px; border:1px solid rgba(240,71,63,0.5);
+    background:rgba(240,71,63,0.2); color:#ff8a83; font-family:inherit; font-weight:800; font-size:12px; cursor:pointer;
+  }
+  .admin-delete-no{
+    padding:7px 12px; border-radius:8px; border:1px solid var(--card-border);
+    background:var(--card-2); color:var(--white); font-family:inherit; font-weight:700; font-size:12px; cursor:pointer;
+  }
 
   /* ---- Danger zone ---- */
   .danger-card{
@@ -448,7 +470,7 @@
 
     <div class="card" id="admins-card">
       <div class="card-title"><span class="em">👑</span> Administratori</div>
-      <p class="card-note" style="margin:0 0 14px;">Alege cine are acces la funcțiile de admin (scoate din listă, blochează, vede telefoane, marchează cash) — apar sau dispar automat, fără nicio modificare de cod. Fondatorul e mereu admin și nu poate fi schimbat de aici. Un jucător trebuie să se fi înregistrat cel puțin o dată ca să poată fi făcut admin.</p>
+      <p class="card-note" style="margin:0 0 14px;">Alege cine are acces la funcțiile de admin (scoate din listă, blochează, vede telefoane, marchează cash) — apar sau dispar automat, fără nicio modificare de cod. Fondatorul e mereu admin și nu poate fi schimbat de aici. Un jucător trebuie să se fi înregistrat cel puțin o dată ca să poată fi făcut admin. Cu 🗑️ ștergi definitiv un profil (de test, duplicat etc.) din bază — dispare complet, inclusiv din meciul curent, dacă era înscris.</p>
       <input type="text" id="admins-search" placeholder="Caută după nume sau telefon..." style="margin-bottom:14px;">
       <div id="admins-list"></div>
     </div>
@@ -728,6 +750,7 @@
       const chip = isAdminRole ? '<span class="role-chip role-chip-admin">Administrator</span>' : '';
       const btnClass = isAdminRole ? 'admin-toggle-btn remove-admin' : 'admin-toggle-btn make-admin';
       const btnLabel = isAdminRole ? 'Scoate admin' : 'Fă admin';
+      const rawPhone = escapeHtml(p.phone || '');
       return `
         <div class="admin-row">
           <div class="admin-row-info">
@@ -735,7 +758,8 @@
             <div class="admin-row-phone">${phone}</div>
           </div>
           ${chip}
-          <button type="button" class="${btnClass}" data-phone="${escapeHtml(p.phone || '')}" data-action="${isAdminRole ? 'remove' : 'add'}">${btnLabel}</button>
+          <button type="button" class="${btnClass}" data-phone="${rawPhone}" data-action="${isAdminRole ? 'remove' : 'add'}">${btnLabel}</button>
+          <button type="button" class="admin-delete-btn" data-phone="${rawPhone}" data-name="${name}" title="Șterge definitiv acest jucător (ex. profil de test)">🗑️</button>
         </div>`;
     }).join('');
   }
@@ -770,6 +794,57 @@
     } finally {
       btn.disabled = false;
       btn.textContent = originalLabel;
+    }
+  });
+
+  // ---------- Sterge definitiv un jucator (profil de test, duplicat etc.), confirmare inline pe rand ----------
+  el('admins-list').addEventListener('click', async (e) => {
+    const delBtn = e.target.closest('.admin-delete-btn');
+    if (delBtn) {
+      const row = delBtn.closest('.admin-row');
+      if (row.querySelector('.admin-delete-confirm')) return; // deja in confirmare
+      // valorile din dataset sunt deja text simplu decodat de browser — le re-scapam inainte sa
+      // le bagam in innerHTML, ca sa nu redeschidem o portita de XSS printr-un nume "creativ"
+      const phone = escapeHtml(delBtn.dataset.phone || '');
+      const name = escapeHtml(delBtn.dataset.name || '');
+      const confirmWrap = document.createElement('div');
+      confirmWrap.className = 'admin-delete-confirm';
+      confirmWrap.innerHTML = `<span>Sigur ștergi definitiv pe ${name}?</span><button type="button" class="admin-delete-yes" data-phone="${phone}">Da, șterge</button><button type="button" class="admin-delete-no">Anulează</button>`;
+      row.appendChild(confirmWrap);
+      delBtn.disabled = true;
+      return;
+    }
+
+    const noBtn = e.target.closest('.admin-delete-no');
+    if (noBtn) {
+      const row = noBtn.closest('.admin-row');
+      row.querySelector('.admin-delete-confirm')?.remove();
+      const btn = row.querySelector('.admin-delete-btn');
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    const yesBtn = e.target.closest('.admin-delete-yes');
+    if (yesBtn) {
+      const phone = yesBtn.dataset.phone;
+      yesBtn.disabled = true;
+      yesBtn.textContent = 'Se șterge...';
+      try {
+        const res = await fetch('/api/admin/delete-player', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ key: currentKey, phone }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Eroare la ștergere.', 'error'); return; }
+        showToast('Jucător șters ✅', 'ok');
+        await loadAdmins();
+      } catch (err) {
+        showToast('Nu am putut contacta serverul.', 'error');
+      } finally {
+        yesBtn.disabled = false;
+        yesBtn.textContent = 'Da, șterge';
+      }
     }
   });
 
