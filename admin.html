@@ -225,6 +225,34 @@
   }
   .add-tier-btn:hover{ color:var(--white); border-color:var(--grass); }
 
+  /* ---- Administratori ---- */
+  .admin-row{
+    display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px;
+    padding:11px 0; border-bottom:1px solid var(--line);
+  }
+  .admin-row:last-child{ border-bottom:none; }
+  .admin-row-info{ flex:1 1 140px; min-width:140px; }
+  /* niciodata trunchiat cu "…" — un nume mai lung pur si simplu trece pe randul urmator */
+  .admin-row-name{ font-weight:700; font-size:14.5px; word-break:break-word; }
+  .admin-row-phone{ font-size:12px; color:var(--muted); font-weight:600; margin-top:1px; }
+  .role-chip{
+    flex-shrink:0; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+    padding:4px 9px; border-radius:999px; white-space:nowrap;
+  }
+  .role-chip-founder{ background:linear-gradient(135deg, rgba(244,196,48,0.24), rgba(242,169,59,0.14)); color:var(--gold); border:1px solid rgba(244,196,48,0.5); }
+  .role-chip-admin{ background:rgba(242,169,59,0.16); color:var(--amber); border:1px solid rgba(242,169,59,0.35); }
+  .admin-toggle-btn{
+    flex-shrink:0; padding:8px 12px; border-radius:9px; border:1px solid var(--card-border);
+    background:var(--card-2); color:var(--white); font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer;
+    white-space:nowrap;
+  }
+  .admin-toggle-btn.make-admin{ border-color:rgba(34,197,94,0.4); color:#5eeba3; }
+  .admin-toggle-btn.remove-admin{ border-color:rgba(240,71,63,0.4); color:#ff8a83; }
+  .admin-toggle-btn:active{ transform:translateY(1px); }
+  .admin-toggle-btn:disabled{ opacity:.6; cursor:default; }
+  .admins-empty{ font-size:13px; color:var(--muted); font-weight:600; padding:8px 0; }
+  .admin-founder-fixed{ font-size:11.5px; color:var(--muted); font-weight:700; flex-shrink:0; }
+
   /* ---- Danger zone ---- */
   .danger-card{
     border:1px solid rgba(240,71,63,0.35);
@@ -418,6 +446,13 @@
       </div>
     </div>
 
+    <div class="card" id="admins-card">
+      <div class="card-title"><span class="em">👑</span> Administratori</div>
+      <p class="card-note" style="margin:0 0 14px;">Alege cine are acces la funcțiile de admin (scoate din listă, blochează, vede telefoane, marchează cash) — apar sau dispar automat, fără nicio modificare de cod. Fondatorul e mereu admin și nu poate fi schimbat de aici. Un jucător trebuie să se fi înregistrat cel puțin o dată ca să poată fi făcut admin.</p>
+      <input type="text" id="admins-search" placeholder="Caută după nume sau telefon..." style="margin-bottom:14px;">
+      <div id="admins-list"></div>
+    </div>
+
   </div>
 
   <div class="savebar">
@@ -433,6 +468,13 @@
   const KEY_STORAGE = 'vineri_admin_key';
   let currentKey = '';
   let selectedStatus = 'open';
+  let allAdminsPlayers = [];
+  let founderPhone = null;
+  let adminsSearchQuery = '';
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
 
   // ---------- Toast ----------
   let toastTimer = null;
@@ -552,6 +594,7 @@
       el('dashboard').classList.add('show');
       el('topbar-actions').style.display = 'flex';
       renderData(data);
+      loadAdmins();
       if (reason === 'login') showToast('Conectat cu succes ✅', 'ok');
       else if (reason === 'refresh') showToast('Actualizat ✅', 'ok');
     } catch (e) {
@@ -639,6 +682,96 @@
     }
   }
   el('save').addEventListener('click', save);
+
+  // ---------- Administratori (adauga/scoate dinamic, fara redeploy) ----------
+  async function loadAdmins(){
+    try {
+      const res = await fetch('/api/admin/admins?key=' + encodeURIComponent(currentKey));
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Nu am putut încărca lista de administratori.', 'error'); return; }
+      allAdminsPlayers = data.players || [];
+      founderPhone = data.founderPhone || null;
+      renderAdminsList();
+    } catch (e) {
+      showToast('Nu am putut contacta serverul pentru lista de administratori.', 'error');
+    }
+  }
+
+  function renderAdminsList(){
+    const q = adminsSearchQuery.trim().toLowerCase();
+    const list = allAdminsPlayers.filter((p) => {
+      if (!q) return true;
+      return (p.name || '').toLowerCase().includes(q) || (p.phone || '').toLowerCase().includes(q);
+    });
+
+    const container = el('admins-list');
+    if (!list.length) {
+      container.innerHTML = `<p class="admins-empty">${allAdminsPlayers.length ? 'Niciun jucător nu se potrivește căutării.' : 'Niciun jucător înregistrat încă.'}</p>`;
+      return;
+    }
+
+    container.innerHTML = list.map((p) => {
+      const name = escapeHtml(p.name || 'Jucător');
+      const phone = escapeHtml(p.phone || '—');
+      if (p.role === 'founder') {
+        return `
+          <div class="admin-row">
+            <div class="admin-row-info">
+              <div class="admin-row-name">${name}</div>
+              <div class="admin-row-phone">${phone}</div>
+            </div>
+            <span class="role-chip role-chip-founder">👑 Fondator</span>
+            <span class="admin-founder-fixed">Fix</span>
+          </div>`;
+      }
+      const isAdminRole = p.role === 'admin';
+      const chip = isAdminRole ? '<span class="role-chip role-chip-admin">Administrator</span>' : '';
+      const btnClass = isAdminRole ? 'admin-toggle-btn remove-admin' : 'admin-toggle-btn make-admin';
+      const btnLabel = isAdminRole ? 'Scoate admin' : 'Fă admin';
+      return `
+        <div class="admin-row">
+          <div class="admin-row-info">
+            <div class="admin-row-name">${name}</div>
+            <div class="admin-row-phone">${phone}</div>
+          </div>
+          ${chip}
+          <button type="button" class="${btnClass}" data-phone="${escapeHtml(p.phone || '')}" data-action="${isAdminRole ? 'remove' : 'add'}">${btnLabel}</button>
+        </div>`;
+    }).join('');
+  }
+
+  el('admins-search').addEventListener('input', (e) => {
+    adminsSearchQuery = e.target.value;
+    renderAdminsList();
+  });
+
+  el('admins-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.admin-toggle-btn');
+    if (!btn) return;
+    const phone = btn.dataset.phone;
+    const action = btn.dataset.action; // 'add' | 'remove'
+    if (!phone) return;
+
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = action === 'add' ? 'Se adaugă...' : 'Se scoate...';
+    try {
+      const res = await fetch('/api/admin/' + (action === 'add' ? 'add-admin' : 'remove-admin'), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ key: currentKey, phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Eroare la actualizarea administratorilor.', 'error'); return; }
+      showToast(action === 'add' ? 'Adăugat ca admin ✅' : 'Scos din administratori ✅', 'ok');
+      await loadAdmins();
+    } catch (e) {
+      showToast('Nu am putut contacta serverul.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
 
   // ---------- Reset lista (doua pasuri, inline) ----------
   function armReset(){

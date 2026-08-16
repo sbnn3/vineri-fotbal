@@ -728,13 +728,14 @@
     min-width:0;
     flex:0 1 auto;
   }
+  /* numele nu se trunchiaza niciodata cu "…" — daca randul e prea stramt (multe iconite de
+     admin langa el: apel/blocare/scoatere), numele trece pur si simplu pe randul urmator */
   .pname{
     flex:0 1 auto;
     min-width:0;
     max-width:100%;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+    overflow-wrap:break-word;
+    word-break:break-word;
   }
   li.me span.pname{ color:var(--gold); }
   .role-tag{
@@ -753,6 +754,7 @@
     box-sizing:border-box;
   }
   .role-tag-admin{ background:rgba(242,169,59,0.16); color:var(--amber); border:1px solid rgba(242,169,59,0.35); }
+  .role-tag-founder{ background:linear-gradient(135deg, rgba(244,196,48,0.24), rgba(242,169,59,0.14)); color:var(--gold); border:1px solid rgba(244,196,48,0.5); }
   /* ---- Icoanele de actiune (apel/blocare/kick) stau lipite de nume, nu impinse in dreapta ---- */
   .prow-icons{
     display:flex;
@@ -1254,8 +1256,10 @@
   function roleTagHtml(role){
     // eticheta sta pe un rand separat, sub nume (vezi .pname-group), asa ca textul intreg
     // incape aproape mereu; daca spatiul e totusi foarte stramt, se trunchiaza elegant cu "…"
-    // toti cei 3 admini poarta aceeasi eticheta "Administrator" — protectia contului nu tine
-    // de eticheta, ci e legata strict de un singur numar de telefon (vezi server.js)
+    // Fondatorul (contul proprietarului) e mereu protejat si fix; ceilalti admini sunt gestionati
+    // dinamic din Panoul admin — protectia contului nu tine de eticheta, ci e legata strict de un
+    // singur numar de telefon (vezi server.js)
+    if (role === 'founder') return '<span class="role-tag role-tag-founder">👑 Fondator</span>';
     if (role === 'admin') return '<span class="role-tag role-tag-admin">Administrator</span>';
     return '';
   }

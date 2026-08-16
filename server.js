@@ -55,6 +55,15 @@ let cachedData = null;
 function ensureConfig(data) {
   data.config = Object.assign({}, DEFAULT_CONFIG, data.config || {});
   if (!Array.isArray(data.blocked)) data.blocked = []; // migrare: lista de jucatori blocati, adaugata ulterior
+  if (!Array.isArray(data.admins)) {
+    // migrare: admini gestionati dinamic din panoul admin (adauga.php/scoate), nu mai sunt fixati in cod.
+    // La prima rulare dupa upgrade, pastram Dima si Catalin ca admini (erau hardcodati inainte) — dar NU
+    // si Fondatorul, care e mereu admin separat, prin PROTECTED_ADMIN_PHONE (vezi mai jos), indiferent
+    // de aceasta lista.
+    data.admins = ADMIN_PHONES_ORDERED
+      .filter((phone) => phone !== PROTECTED_ADMIN_PHONE)
+      .map((phone) => ({ phone, addedAt: new Date().toISOString() }));
+  }
 }
 
 async function upstashGet() {
@@ -100,6 +109,7 @@ async function initData() {
     }
   }
   cachedData = { players: [], matches: [], rsvps: [], blocked: [], config: Object.assign({}, DEFAULT_CONFIG) };
+  ensureConfig(cachedData); // instalare 100% noua — initializeaza si data.admins (vezi ensureConfig)
 }
 
 function getData() {
@@ -154,28 +164,34 @@ function normalizePhone(phone) {
 }
 
 // ---------- Admini recunoscuti dupa numarul de telefon (nu au nevoie de ADMIN_KEY) ----------
-// Cei 3 organizatori din grup: cand se inregistreaza/recupereaza contul cu unul din aceste
-// numere, primesc controale suplimentare direct pe ecranul principal (scoate jucator, suna,
-// marcheaza cash incasat). Poate fi schimbat fara redeploy prin variabila de mediu ADMIN_PHONES
-// (numere separate prin virgula) — PRIMUL numar din lista e "Administratorul" (contul proprietarului,
-// protejat integral — nimeni, nici ceilalti admini, nu poate sa-l scoata sau sa-l blocheze), restul
-// sunt "Moderatori".
+// Fondatorul (contul proprietarului) e fixat prin variabila de mediu ADMIN_PHONES / valoarea
+// implicita de mai jos — primul numar din lista e mereu Fondator si e protejat integral (nimeni
+// nu poate sa-l scoata, sa-l blocheze sau sa-i ia rolul). Restul adminilor (Administratori) NU mai
+// sunt fixati in cod: se gestioneaza dinamic din Panoul admin (sectiunea "Administratori"), salvati
+// in data.admins — cand ii adaugi acolo primesc pe loc toate drepturile (scoate/blocheaza/vede
+// telefoane/marcheaza cash) si eticheta corespunzatoare, iar cand ii scoti le pierd automat, fara
+// nicio modificare de cod sau redeploy.
 const DEFAULT_ADMIN_PHONES = ['0894394691', '0873876602', '0874681735'];
 const ADMIN_PHONES_ORDERED = (process.env.ADMIN_PHONES ? process.env.ADMIN_PHONES.split(',') : DEFAULT_ADMIN_PHONES)
   .map(normalizePhone)
   .filter(Boolean);
-const ADMIN_PHONES = new Set(ADMIN_PHONES_ORDERED);
 const PROTECTED_ADMIN_PHONE = ADMIN_PHONES_ORDERED[0] || null;
 
-function isAdminPhone(phone) {
-  return ADMIN_PHONES.has(normalizePhone(phone));
+function isAdminPhone(data, phone) {
+  const norm = normalizePhone(phone);
+  if (!norm) return false;
+  if (PROTECTED_ADMIN_PHONE && norm === PROTECTED_ADMIN_PHONE) return true;
+  return (data.admins || []).some((a) => a.phone === norm);
 }
 
-// 'admin' pentru oricare din cei 3 admini (toti poarta eticheta "Administrator"), null = jucator normal.
-// Protectia impotriva blocarii/eliminarii nu tine de aceasta eticheta, ci strict de PROTECTED_ADMIN_PHONE
-// (vezi isProtectedAdmin) — deci Dima si Catalin arata la fel ca tine, dar tot nu au niciun drept asupra ta.
-function getAdminRole(phone) {
-  return isAdminPhone(phone) ? 'admin' : null;
+// 'founder' pentru Fondator (contul proprietarului, fix, protejat integral), 'admin' pentru
+// Administratorii adaugati/scosi dinamic din Panoul admin, null = jucator normal. Protectia
+// impotriva blocarii/eliminarii nu tine de eticheta, ci strict de PROTECTED_ADMIN_PHONE
+// (vezi isProtectedAdmin) — deci Administratorii nu au niciun drept asupra Fondatorului.
+function getAdminRole(data, phone) {
+  const norm = normalizePhone(phone);
+  if (PROTECTED_ADMIN_PHONE && norm === PROTECTED_ADMIN_PHONE) return 'founder';
+  return isAdminPhone(data, phone) ? 'admin' : null;
 }
 
 // contul Administratorului: nimeni (nici ceilalti admini) nu are voie sa-l scoata din lista sau sa-l blocheze
@@ -376,14 +392,14 @@ function matchView(data, match, token) {
   const rsvpsForMatch = data.rsvps.filter((r) => r.matchId === match.id && r.status !== 'cancelled');
 
   const requester = token ? data.players.find((p) => p.id === token) : null;
-  const isAdmin = Boolean(requester && isAdminPhone(requester.phone));
+  const isAdmin = Boolean(requester && isAdminPhone(data, requester.phone));
 
   const mapEntry = (r) => {
     const p = data.players.find((pl) => pl.id === r.playerId);
     const base = { name: p ? p.name : 'Jucator', payment: r.payment || null };
-    // eticheta "Administrator" e vizibila pentru toata lumea (nu doar pentru admini), ca oricine
-    // sa stie cine e admin in lista
-    base.role = getAdminRole(p ? p.phone : null);
+    // eticheta "Administrator"/"Fondator" e vizibila pentru toata lumea (nu doar pentru admini), ca
+    // oricine sa stie cine e admin in lista
+    base.role = getAdminRole(data, p ? p.phone : null);
     // id-ul jucatorului, statusul platii si flagul de protectie raman doar pentru admini (folosite
     // la moderare); telefonul insa apare fie pentru admini (pot suna pe oricine), fie pentru oricine
     // altcineva doar daca randul e al unui admin (ca sa poata fi sunat de un jucator obisnuit)
@@ -664,7 +680,7 @@ const server = http.createServer(async (req, res) => {
       if (!token || !targetId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
       const data = getData();
       const requester = data.players.find((p) => p.id === token);
-      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+      if (!requester || !isAdminPhone(data, requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
 
       // contul Administratorului e protejat integral — nimeni, nici ceilalti admini, nu il poate scoate din lista
       const kickTarget = data.players.find((p) => p.id === targetId);
@@ -687,7 +703,7 @@ const server = http.createServer(async (req, res) => {
       if (!token || !targetId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
       const data = getData();
       const requester = data.players.find((p) => p.id === token);
-      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+      if (!requester || !isAdminPhone(data, requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
 
       const target = data.players.find((p) => p.id === targetId);
       if (!target) return sendJSON(res, 404, { error: 'Jucator negasit.' });
@@ -722,7 +738,7 @@ const server = http.createServer(async (req, res) => {
       if (!token || !blockedId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
       const data = getData();
       const requester = data.players.find((p) => p.id === token);
-      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+      if (!requester || !isAdminPhone(data, requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
 
       data.blocked = (data.blocked || []).filter((b) => b.id !== blockedId);
 
@@ -739,7 +755,7 @@ const server = http.createServer(async (req, res) => {
       if (!token || !targetId) return sendJSON(res, 400, { error: 'Cerere invalida.' });
       const data = getData();
       const requester = data.players.find((p) => p.id === token);
-      if (!requester || !isAdminPhone(requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
+      if (!requester || !isAdminPhone(data, requester.phone)) return sendJSON(res, 403, { error: 'Nu ai voie sa faci asta.' });
 
       const match = await getOrCreateCurrentMatch(data);
       const entry = data.rsvps.find((r) => r.matchId === match.id && r.playerId === targetId && r.status !== 'cancelled');
@@ -748,6 +764,53 @@ const server = http.createServer(async (req, res) => {
 
       await persist(data);
       return sendJSON(res, 200, matchView(data, match, token));
+    }
+
+    // ---- API ADMIN: lista tuturor jucatorilor inregistrati + rolul fiecaruia (necesita cheie) ----
+    // Folosita de sectiunea "Administratori" din Panoul admin, ca sa poata fi ales oricine a jucat
+    // vreodata (nu doar cei din meciul curent) pentru a-i face/scoate admin.
+    if (pathname === '/api/admin/admins' && req.method === 'GET') {
+      if (parsed.query.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
+      const data = getData();
+      const players = data.players
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'ro'))
+        .map((p) => ({ id: p.id, name: p.name, phone: p.phone, role: getAdminRole(data, p.phone) }));
+      return sendJSON(res, 200, { players, founderPhone: PROTECTED_ADMIN_PHONE });
+    }
+
+    // ---- API ADMIN: fa admin un jucator deja inregistrat, dupa telefon (necesita cheie) ----
+    // Primeste pe loc toate drepturile de Administrator (scoate/blocheaza/vede telefoane/marcheaza
+    // cash) si eticheta corespunzatoare — fara nicio modificare de cod sau redeploy.
+    if (pathname === '/api/admin/add-admin' && req.method === 'POST') {
+      const body = await readBody(req);
+      if (body.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
+      const phone = normalizePhone(body.phone);
+      if (!phone) return sendJSON(res, 400, { error: 'Numar de telefon invalid.' });
+      const data = getData();
+      const player = findPlayerByPhone(data, phone);
+      if (!player) return sendJSON(res, 404, { error: 'Nu exista niciun jucator inregistrat cu acest numar.' });
+      if (phone === PROTECTED_ADMIN_PHONE) return sendJSON(res, 400, { error: 'Acest cont este deja Fondator.' });
+      if (!Array.isArray(data.admins)) data.admins = [];
+      if (!data.admins.some((a) => a.phone === phone)) {
+        data.admins.push({ phone, addedAt: new Date().toISOString() });
+        await persist(data);
+      }
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    // ---- API ADMIN: scoate un admin (isi pierde pe loc toate drepturile) — necesita cheie ----
+    // Fondatorul nu poate fi scos de aici, e fixat prin PROTECTED_ADMIN_PHONE.
+    if (pathname === '/api/admin/remove-admin' && req.method === 'POST') {
+      const body = await readBody(req);
+      if (body.key !== ADMIN_KEY) return sendJSON(res, 401, { error: 'Cheie admin invalida.' });
+      const phone = normalizePhone(body.phone);
+      if (!phone) return sendJSON(res, 400, { error: 'Numar de telefon invalid.' });
+      if (phone === PROTECTED_ADMIN_PHONE) return sendJSON(res, 400, { error: 'Contul de Fondator nu poate fi eliminat.' });
+      const data = getData();
+      data.admins = (data.admins || []).filter((a) => a.phone !== phone);
+      await persist(data);
+      return sendJSON(res, 200, { ok: true });
     }
 
     // ---- API ADMIN: reseteaza lista de participanti a meciului curent (necesita cheie) ----
