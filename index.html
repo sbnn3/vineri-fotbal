@@ -1289,9 +1289,9 @@
       const rightGroup = `<span class="prow-right">${paymentBadge(p)}</span>`;
       return `<li class="${isMe ? 'me' : ''}">${identity}${actionIcons}${rightGroup}</li>`;
     }
-    // vizitator obisnuit: fara butoane de scos/blocat, dar poate suna direct un admin din lista
-    // (telefonul apare doar pe randul unui admin — vezi server.js matchView)
-    const publicCallBtn = (p.role === 'admin' && p.phone)
+    // vizitator obisnuit: fara butoane de scos/blocat, dar poate suna direct un admin sau pe
+    // Fondator din lista (telefonul apare doar pe randul lor — vezi server.js matchView)
+    const publicCallBtn = ((p.role === 'admin' || p.role === 'founder') && p.phone)
       ? `<span class="prow-icons"><a href="tel:${escapeHtml(p.phone)}" class="call-btn" title="Sună pe ${escapeHtml(p.name)}">📞</a></span>`
       : '';
     return `<li class="${isMe ? 'me' : ''}">${identity}${publicCallBtn}<span class="prow-right">${paymentBadge(p)}</span></li>`;

@@ -411,7 +411,9 @@ function matchView(data, match, token) {
       // proprietarului e marcat protejat — clientul foloseste asta ca sa ascunda butoanele de
       // scos/blocat pe randul lui, indiferent cine se uita la listă
       base.protected = isProtectedAdmin(p ? p.phone : null);
-    } else if (base.role === 'admin') {
+    } else if (base.role === 'admin' || base.role === 'founder') {
+      // Fondatorul e tot un admin din punctul asta de vedere — jucatorii obisnuiti trebuie
+      // sa-i poata vedea/suna telefonul la fel ca la ceilalti admini (vezi si index.html publicCallBtn)
       base.phone = p ? p.phone : null;
     }
     return base;
