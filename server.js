@@ -880,7 +880,10 @@ const server = http.createServer(async (req, res) => {
         if (cleaned.length) match.priceTiers = cleaned;
       }
 
-      // promoveaza din lista de rezerva daca s-a marit capacitatea
+      // promoveaza din lista de rezerva daca s-a marit capacitatea, sau muta pe rezerva daca s-a
+      // micsorat sub numarul de confirmati curent (ex: eram 13, se schimba la 12 pentru 6vs6 —
+      // ultimul intrat (cel mai recent confirmat, FIFO) trece automat pe rezerva, ca sa ramana
+      // exact 12 confirmati, la fel ca la kick/leave)
       const confirmedCount = data.rsvps.filter((r) => r.matchId === match.id && r.status === 'confirmed').length;
       let freeSpots = match.capacity - confirmedCount;
       if (freeSpots > 0) {
@@ -891,6 +894,16 @@ const server = http.createServer(async (req, res) => {
           if (freeSpots <= 0) break;
           r.status = 'confirmed';
           freeSpots--;
+        }
+      } else if (freeSpots < 0) {
+        const toDemote = data.rsvps
+          .filter((r) => r.matchId === match.id && r.status === 'confirmed')
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)); // cei mai recenti primii
+        let overflow = -freeSpots;
+        for (const r of toDemote) {
+          if (overflow <= 0) break;
+          r.status = 'waitlist';
+          overflow--;
         }
       }
 
