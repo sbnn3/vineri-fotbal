@@ -936,6 +936,20 @@
     <p id="closed-message" style="margin:0; color:var(--muted); font-weight:600; font-size:14.5px; line-height:1.55;"></p>
   </div>
 
+  <!-- Card cu locatia si vremea pentru meciul urmator, afisat sub mesajul de "inscrieri inchise" -->
+  <div id="closed-location-card" class="card hidden">
+    <div class="section-title starters" style="margin-top:0;"><span class="dot"></span>Locație &amp; vreme</div>
+    <div class="match-meta" style="margin-top:0;">
+      <span id="closed-loc-text">📍 —</span>
+      <span id="closed-weather" class="hidden">🌡️ —</span>
+    </div>
+    <div class="location-box">
+      <div class="ltitle">📍 Cum ajungi</div>
+      <iframe class="map-frame" id="closed-map-frame" src="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <a href="#" id="closed-btn-maps" class="btn-maps" target="_blank" rel="noopener">Deschide în Google Maps ↗</a>
+    </div>
+  </div>
+
   <!-- Ecran principal (meci curent) -->
   <div id="main-screen" class="hidden">
     <div class="card" id="match-card">
@@ -1095,6 +1109,13 @@
     const [y,m,d] = iso.split('-').map(Number);
     return `${d} ${LUNI_FULL[m-1]}`;
   }
+  // varianta cu luna cu litera mare (ex: "28 August"), pentru texte de tip titlu/mesaj elegant —
+  // formatFullDate ramane neschimbata (litera mica) pentru locurile unde e folosita in mijlocul unei fraze
+  function formatFullDateCap(iso){
+    const [y,m,d] = iso.split('-').map(Number);
+    const luna = LUNI_FULL[m-1];
+    return `${d} ${luna.charAt(0).toUpperCase()}${luna.slice(1)}`;
+  }
 
   function getToken(){
     const params = new URLSearchParams(window.location.search);
@@ -1135,18 +1156,36 @@
     try {
       const status = await api(API.registrationStatus);
       if (!status.open) {
-        const detalii = (status.time || status.location)
-          ? ` Jucăm la <b>${escapeHtml(status.time || '19:00')}</b>${status.location ? ` la <b>${escapeHtml(status.location)}</b>` : ''}.`
-          : '';
-        el('closed-message').innerHTML = `Înscrierile pentru meciul de <b>vineri, ${escapeHtml(formatFullDate(status.matchDate))}</b> se deschid <b>miercuri, ${escapeHtml(formatFullDate(status.opensAt))}</b>.${detalii} Revino atunci ca să-ți confirmi locul! ⚽`;
+        const detalii = status.time ? ` Jucăm la <b>${escapeHtml(status.time)}</b>.` : '';
+        el('closed-message').innerHTML = `Înscrierile pentru meciul de <b>Vineri, ${escapeHtml(formatFullDateCap(status.matchDate))}</b> se deschid <b>Miercuri, ${escapeHtml(formatFullDateCap(status.opensAt))}</b>.${detalii} Revino atunci ca să-ți confirmi locul! ⚽`;
         show('closed-screen');
+        showClosedLocation(status);
         return;
       }
+      hide('closed-location-card');
     } catch (e) {
       // daca nu putem afla starea inscrierilor, preferam sa aratam formularul normal —
       // mai bine deschis din greseala decat blocat din greseala
+      hide('closed-location-card');
     }
     show('register-screen');
+  }
+
+  // card separat cu locatia (harta Google Maps) si vremea pentru meciul urmator, afisat sub
+  // mesajul elegant de "inscrieri inchise" — foloseste acelasi API de vreme ca ecranul principal,
+  // care deja calculeaza prognoza pentru data meciului curent (nu pentru "azi")
+  let lastClosedMapLocation = null;
+  function showClosedLocation(status){
+    if (!status.location) { hide('closed-location-card'); return; }
+    el('closed-loc-text').textContent = `📍 ${status.location}`;
+    const query = encodeURIComponent(status.location);
+    if (lastClosedMapLocation !== status.location) {
+      el('closed-map-frame').src = `https://maps.google.com/maps?q=${query}&z=15&output=embed`;
+      lastClosedMapLocation = status.location;
+    }
+    el('closed-btn-maps').href = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    show('closed-location-card');
+    loadWeatherInto('closed-weather');
   }
 
   async function init(){
@@ -1171,17 +1210,23 @@
   }
 
   async function loadWeather(){
+    await loadWeatherInto('match-weather');
+  }
+
+  // populeaza orice element (id) cu textul de vreme pentru meciul curent — folosit atat pe
+  // ecranul principal (match-weather) cat si pe cardul de locatie de pe ecranul "inchis" (closed-weather)
+  async function loadWeatherInto(elementId){
     try {
       const data = await api(API.weather);
       if (data.weather) {
         const rainText = data.weather.rain != null ? ` · ${data.weather.rain}% ploaie` : '';
-        el('match-weather').textContent = `${data.weather.emoji} ${data.weather.temp}°C${rainText}`;
-        show('match-weather');
+        el(elementId).textContent = `${data.weather.emoji} ${data.weather.temp}°C${rainText}`;
+        show(elementId);
       } else {
-        hide('match-weather');
+        hide(elementId);
       }
     } catch (e) {
-      hide('match-weather');
+      hide(elementId);
     }
   }
 
