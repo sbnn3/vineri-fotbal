@@ -29,6 +29,21 @@ const STATIC_FILES = {
   '/admin': 'admin.html',
   '/admin.html': 'admin.html',
   '/social-card.jpg': 'social-card.jpg',
+  // Favicon + logo-uri "Adauga pe ecranul principal" (vezi index.html / admin.html <head>)
+  '/manifest.json': 'manifest.json',
+  '/manifest-admin.json': 'manifest-admin.json',
+  '/icon-main.svg': 'icon-main.svg',
+  '/icon-main-32.png': 'icon-main-32.png',
+  '/icon-main-48.png': 'icon-main-48.png',
+  '/icon-main-180.png': 'icon-main-180.png',
+  '/icon-main-192.png': 'icon-main-192.png',
+  '/icon-main-512.png': 'icon-main-512.png',
+  '/icon-admin.svg': 'icon-admin.svg',
+  '/icon-admin-32.png': 'icon-admin-32.png',
+  '/icon-admin-48.png': 'icon-admin-48.png',
+  '/icon-admin-180.png': 'icon-admin-180.png',
+  '/icon-admin-192.png': 'icon-admin-192.png',
+  '/icon-admin-512.png': 'icon-admin-512.png',
 };
 
 const DEFAULT_CONFIG = {

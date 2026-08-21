@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0e3a22"/>
+      <stop offset="1" stop-color="#04150d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="55%">
+      <stop offset="0" stop-color="#f2a93b" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#f2a93b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg)"/>
+  <circle cx="100" cy="96" r="76" fill="url(#glow)"/>
+  <!-- cheie stilizata (aceeasi ideea ca favicon-ul 🔑 folosit deja pe panoul admin) -->
+  <g transform="translate(100,100) rotate(-25) scale(1.3) translate(-31.75,-62.75)" stroke="#04150d" stroke-width="3" stroke-linejoin="round">
+    <circle cx="32" cy="28" r="22" fill="none" stroke="#f2a93b" stroke-width="13"/>
+    <rect x="26" y="48" width="12" height="70" fill="#f2a93b"/>
+    <rect x="38" y="94" width="16" height="10" fill="#f2a93b"/>
+    <rect x="38" y="110" width="12" height="10" fill="#f2a93b"/>
+  </g>
+</svg>

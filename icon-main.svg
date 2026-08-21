@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0e3a22"/>
+      <stop offset="1" stop-color="#04150d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="55%">
+      <stop offset="0" stop-color="#22c55e" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg)"/>
+  <circle cx="100" cy="94" r="74" fill="url(#glow)"/>
+  <g transform="translate(100,100) scale(1.55) translate(-50,-50)">
+    <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#111111" stroke-width="4"/>
+    <polygon points="50,34 65.22,45.06 59.41,62.94 40.59,62.94 34.78,45.06" fill="#111111"/>
+    <g stroke="#111111" stroke-width="3.5" stroke-linecap="round">
+      <line x1="50" y1="34" x2="50" y2="9"/>
+      <line x1="65.22" y1="45.06" x2="88.99" y2="37.33"/>
+      <line x1="59.41" y1="62.94" x2="74.11" y2="83.17"/>
+      <line x1="40.59" y1="62.94" x2="25.89" y2="83.17"/>
+      <line x1="34.78" y1="45.06" x2="11.01" y2="37.33"/>
+    </g>
+    <g fill="#111111">
+      <circle cx="50" cy="9" r="3.4"/>
+      <circle cx="88.99" cy="37.33" r="3.4"/>
+      <circle cx="74.11" cy="83.17" r="3.4"/>
+      <circle cx="25.89" cy="83.17" r="3.4"/>
+      <circle cx="11.01" cy="37.33" r="3.4"/>
+    </g>
+  </g>
+</svg>
