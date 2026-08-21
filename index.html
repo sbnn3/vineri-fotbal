@@ -927,6 +927,15 @@
     <p style="margin-top:14px;font-size:12px; color:var(--muted); font-weight:600;">Dacă te-ai mai înregistrat, introdu același număr de telefon și te recunoaștem automat.</p>
   </div>
 
+  <!-- Ecran "inscrieri inchise temporar" (Sambata-Marti) — inlocuieste ecranul de inregistrare
+       pentru cei fara sesiune salvata; se afiseaza doar cand serverul confirma ca e inchis
+       (vezi API.registrationStatus), nu se ghideaza dupa ceasul telefonului -->
+  <div id="closed-screen" class="card hidden" style="text-align:center;">
+    <div style="font-size:38px; line-height:1; margin-bottom:10px;">🌙</div>
+    <h2 style="margin:0 0 10px; font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:.03em;">Revenim în curând ⚽</h2>
+    <p id="closed-message" style="margin:0; color:var(--muted); font-weight:600; font-size:14.5px; line-height:1.55;"></p>
+  </div>
+
   <!-- Ecran principal (meci curent) -->
   <div id="main-screen" class="hidden">
     <div class="card" id="match-card">
@@ -1056,6 +1065,7 @@
     rsvp: '/api/rsvp',
     payment: '/api/payment',
     weather: '/api/weather',
+    registrationStatus: '/api/registration-status',
     kick: '/api/admin/kick',
     markPaid: '/api/admin/mark-paid',
     block: '/api/admin/block',
@@ -1117,9 +1127,31 @@
   let lastMatchData = null;
   let isAdminView = false;
 
+  // arata mesajul elegant "revenim miercuri" in locul formularului de inregistrare, daca
+  // serverul confirma ca inscrierile sunt inchise acum (Sambata-Marti); altfel arata formularul
+  // normal. Nu ne ghidam dupa ceasul telefonului — intrebam mereu serverul, ca sa fie corect
+  // pentru toata lumea indiferent de fusul orar setat pe telefon.
+  async function showRegisterOrClosed(){
+    try {
+      const status = await api(API.registrationStatus);
+      if (!status.open) {
+        const detalii = (status.time || status.location)
+          ? ` Jucăm la <b>${escapeHtml(status.time || '19:00')}</b>${status.location ? ` la <b>${escapeHtml(status.location)}</b>` : ''}.`
+          : '';
+        el('closed-message').innerHTML = `Înscrierile pentru meciul de <b>vineri, ${escapeHtml(formatFullDate(status.matchDate))}</b> se deschid <b>miercuri, ${escapeHtml(formatFullDate(status.opensAt))}</b>.${detalii} Revino atunci ca să-ți confirmi locul! ⚽`;
+        show('closed-screen');
+        return;
+      }
+    } catch (e) {
+      // daca nu putem afla starea inscrierilor, preferam sa aratam formularul normal —
+      // mai bine deschis din greseala decat blocat din greseala
+    }
+    show('register-screen');
+  }
+
   async function init(){
     hide('loading');
-    if (!currentToken) { show('register-screen'); return; }
+    if (!currentToken) { await showRegisterOrClosed(); return; }
     try {
       const me = await api(`${API.me}?token=${encodeURIComponent(currentToken)}`);
       myName = me.name;
@@ -1128,7 +1160,7 @@
     } catch (e) {
       clearToken();
       currentToken = null;
-      show('register-screen');
+      await showRegisterOrClosed();
     }
   }
 

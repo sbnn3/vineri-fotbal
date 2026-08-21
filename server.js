@@ -151,6 +151,24 @@ function nextFridayISO() {
   return target.toISOString().slice(0, 10);
 }
 
+// aduna (sau scade, cu numar negativ) zile la o data ISO "YYYY-MM-DD"
+function addDaysISO(dateISO, days) {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+// Fereastra de inscrieri: deschisa Miercuri-Vineri (pentru meciul de vineri care tocmai vine),
+// inchisa Sambata-Marti (dupa ce meciul saptamanii s-a jucat si pana se deschide urmatorul).
+// Se recalculeaza automat din ziua curenta (fus orar Europe/Dublin), fara nicio interventie
+// manuala saptamanala — nextFridayISO() gaseste mereu vinerea corecta, indiferent de zi.
+function isRegistrationOpen() {
+  const { y, m, d } = dublinTodayParts();
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=Duminica ... 6=Sambata
+  return dow === 3 || dow === 4 || dow === 5; // Miercuri, Joi, Vineri
+}
+
 function normalizePhone(phone) {
   let p = String(phone || '').replace(/[^\d+]/g, '');
   if (!p) return '';
@@ -226,7 +244,10 @@ const WEATHER_CODES = {
 };
 
 const weatherCache = new Map(); // "lat,lon,data" -> { at, json }
-const WEATHER_CACHE_TTL = 30 * 60 * 1000;
+// marita de la 30 min la 3 ore: prognoza pentru un meci aflat la cateva zile distanta nu se
+// schimba semnificativ de la o jumatate de ora la alta, iar cereri mai rare inseamna sanse mult
+// mai mici sa lovim limita de rate a Open-Meteo (vezi si fallback-ul din catch de mai jos)
+const WEATHER_CACHE_TTL = 3 * 60 * 60 * 1000;
 
 async function fetchWeatherJSON(lat, lon, dateISO) {
   const cacheKey = `${lat},${lon},${dateISO}`;
@@ -234,11 +255,24 @@ async function fetchWeatherJSON(lat, lon, dateISO) {
   if (cached && Date.now() - cached.at < WEATHER_CACHE_TTL) return cached.json;
 
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability,weathercode&timezone=Europe%2FDublin&start_date=${dateISO}&end_date=${dateISO}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Vremea indisponibila: ' + res.status);
-  const json = await res.json();
-  weatherCache.set(cacheKey, { at: Date.now(), json });
-  return json;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Vremea indisponibila: ' + res.status);
+    const json = await res.json();
+    weatherCache.set(cacheKey, { at: Date.now(), json });
+    return json;
+  } catch (e) {
+    // Open-Meteo poate fi temporar indisponibil (ex. 429 — limita de cereri depasita, posibil
+    // din cauza IP-ului comun de pe planul gratuit Render, folosit si de alte proiecte). Daca
+    // avem deja un raspuns anterior in cache — chiar mai vechi decat TTL-ul normal — il folosim
+    // in continuare, ca sa nu dispara complet widget-ul de vreme din pagina. Mai bine o vreme
+    // usor invechita decat deloc.
+    if (cached) {
+      console.error('Vremea indisponibila, folosesc valoarea din cache (posibil invechita):', e.message);
+      return cached.json;
+    }
+    throw e;
+  }
 }
 
 function pickHourlyWeather(json, dateISO, time) {
@@ -909,6 +943,22 @@ const server = http.createServer(async (req, res) => {
 
       await persist(data);
       return sendJSON(res, 200, matchView(data, match, null));
+    }
+
+    // ---- API: starea ferestrei de inscrieri (fara cheie, publica) — folosita de ecranul de
+    // inregistrare, ca sa arate mesajul elegant "revenim miercuri" in loc de formular, cand
+    // inscrierile sunt inchise (Sambata-Marti). Se recalculeaza automat in fiecare saptamana.
+    if (pathname === '/api/registration-status' && req.method === 'GET') {
+      const data = getData();
+      const match = await getOrCreateCurrentMatch(data);
+      const open = isRegistrationOpen();
+      return sendJSON(res, 200, {
+        open,
+        matchDate: match.date,
+        opensAt: open ? null : addDaysISO(match.date, -2), // miercurea dinaintea acelui vineri
+        time: match.time,
+        location: match.location,
+      });
     }
 
     // ---- API: vremea pentru meciul curent (Open-Meteo, fara cheie) ----
