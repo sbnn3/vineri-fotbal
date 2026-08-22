@@ -417,6 +417,9 @@ function buildICS(match, pricing) {
   const morningUTC = new Date(morningNaiveUTC.getTime() - morningOffset * 3600000);
 
   const uid = `match-${match.id}@vineri-fotbal.onrender.com`;
+  // Link catre Google Maps (nu Apple/iPhone Maps) — acelasi format folosit si de butonul
+  // "Deschide in Google Maps" din aplicatie, ca sa fie consistent peste tot.
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -430,8 +433,12 @@ function buildICS(match, pricing) {
     'SUMMARY:Vineri - Seară de Fotbal ⚽',
     `LOCATION:${escapeICS(match.location)}`,
     `GEO:${match.lat};${match.lon}`,
-    `X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=${escapeICS(match.location)};X-APPLE-RADIUS=100;X-TITLE=${escapeICS(match.location)}:geo:${match.lat},${match.lon}`,
-    'DESCRIPTION:Fotbal de vineri seara! Confirma prezenta pe https://vineri-fotbal.onrender.com',
+    // Fara X-APPLE-STRUCTURED-LOCATION in mod intentionat — acel camp e cel care face ca
+    // evenimentul sa deschida automat Apple Maps in Calendarul de iPhone. In loc de asta,
+    // punem un link catre Google Maps, atat ca URL de eveniment cat si in descriere, ca sa
+    // fie garantat clickabil si sa duca mereu la Google Maps, indiferent de dispozitiv.
+    `URL:${googleMapsUrl}`,
+    `DESCRIPTION:Fotbal de vineri seara! Confirma prezenta pe https://vineri-fotbal.onrender.com\\n\\nLocatie (Google Maps): ${googleMapsUrl}`,
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
     'DESCRIPTION:Fotbal in 2 ore!',
