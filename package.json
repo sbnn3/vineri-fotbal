@@ -1,7 +1,7 @@
 {
   "name": "vineri-fotbal",
   "version": "1.0.0",
-  "description": "Aplicatie pentru organizarea meciurilor de fotbal de vineri seara la Celbridge Golf Range, Celbridge",
+  "description": "Aplicatie pentru organizarea meciurilor de fotbal de vineri seara la St. Kevin's FC Centre Of Excellence, Dublin 11",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

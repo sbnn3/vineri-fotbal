@@ -1,4 +1,4 @@
-# ⚽ Fotbal Vineri — Celbridge Golf Range, Celbridge
+# ⚽ Fotbal Vineri — St. Kevin's FC Centre Of Excellence, Dublin 11
 
 Aplicație simplă pentru gestionarea prezenței la meciurile de fotbal de vineri seara. Jucătorii se înregistrează o singură dată (nume + telefon) și apoi confirmă prezența în fiecare săptămână cu un singur click, direct de pe telefon.
 

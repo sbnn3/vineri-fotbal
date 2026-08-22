@@ -47,19 +47,19 @@ const STATIC_FILES = {
 };
 
 const DEFAULT_CONFIG = {
-  location: 'Celbridge Golf Range, Celbridge, Co. Kildare',
+  location: "St. Kevin's FC Centre Of Excellence, Dublin 11, D11 TF72",
   time: '19:00',
-  defaultCapacity: 15,
+  defaultCapacity: 12,
   revtag: 'sbnn3',
-  lat: 53.33907,
-  lon: -6.50912,
+  lat: 53.447124,
+  lon: -6.330216,
   // Pretul per jucator NU e un camp separat — se calculeaza automat din pragul de pret (cost
   // total / nr. de jucatori al pragului respectiv), NU din cati sunt confirmati acum in
   // saptamana curenta (altfel ar arata sume ciudate cat timp lista se umple, ex. 17€ la 3
   // confirmati). Pragul se alege dupa capacitatea saptamanii (vezi computePricing).
   priceTiers: [
-    { minPlayers: 15, totalCost: 70, hours: 2 },   // 3 echipe x 5, 2 ore
-    { minPlayers: 10, totalCost: 50, hours: 1.5 }, // 2 echipe x 5, 1.5 ore
+    { minPlayers: 18, totalCost: 140, hours: 2 },   // teren nou, Dublin 11
+    { minPlayers: 12, totalCost: 105, hours: 1.5 },
   ],
 };
 
@@ -79,17 +79,40 @@ function ensureConfig(data) {
       .filter((phone) => phone !== PROTECTED_ADMIN_PHONE)
       .map((phone) => ({ phone, addedAt: new Date().toISOString() }));
   }
-  // migrare: config-ul a fost salvat initial cu vechea denumire a locatiei ("O'Hanlon Park"),
-  // inainte sa fie redenumita "Celbridge Golf Range". DEFAULT_CONFIG de mai sus a fost actualizat
-  // de atunci, dar valoarea deja salvata are mereu prioritate (vezi Object.assign de mai sus), deci
-  // ramanea "inghetata" la numele vechi — inclusiv in meciurile deja create cu acel nume (de-asta
-  // aparea o denumire diferita pe ecrane diferite). O corectam automat aici, o singura data — si
-  // doar daca gasim exact vechea valoare, ca sa nu suprascriem vreo locatie aleasa manual de admin.
-  const OLD_LOCATION = "O'Hanlon Park, Celbridge";
-  if (data.config.location === OLD_LOCATION) data.config.location = DEFAULT_CONFIG.location;
+  // migrare: locatia terenului (si capacitatea/pretul asociate) s-au schimbat intre timp — intai
+  // locatia, de doua ori ("O'Hanlon Park" -> "Celbridge Golf Range" -> noul teren din Dublin 11 —
+  // vezi DEFAULT_CONFIG mai sus), apoi si capacitatea/pragurile de pret (teren mai mic in Dublin
+  // 11). Config-ul deja salvat are mereu prioritate fata de DEFAULT_CONFIG (vezi Object.assign de
+  // mai sus), deci orice valoare veche ramane "inghetata" pana o corectam explicit aici — altfel
+  // saptamana viitoare noul meci auto-creat ar reveni la valorile vechi. Verificam doar valorile
+  // vechi cunoscute, ca sa nu suprascriem vreodata o schimbare facuta manual de admin.
+  const OLD_LOCATIONS = ["O'Hanlon Park, Celbridge", 'Celbridge Golf Range, Celbridge, Co. Kildare'];
+  const OLD_TIERS_JSON = JSON.stringify([{ minPlayers: 15, totalCost: 70, hours: 2 }, { minPlayers: 10, totalCost: 50, hours: 1.5 }]);
+
+  if (OLD_LOCATIONS.includes(data.config.location)) {
+    data.config.location = DEFAULT_CONFIG.location;
+    data.config.lat = DEFAULT_CONFIG.lat;
+    data.config.lon = DEFAULT_CONFIG.lon;
+  }
+  if (data.config.defaultCapacity === 15) data.config.defaultCapacity = DEFAULT_CONFIG.defaultCapacity;
+  if (JSON.stringify(data.config.priceTiers) === OLD_TIERS_JSON) {
+    data.config.priceTiers = DEFAULT_CONFIG.priceTiers.map((t) => Object.assign({}, t));
+  }
+
+  // acelasi lucru pentru meciurile deja create cu locatia veche (ex. meciul saptamanii curente,
+  // creat inainte ca admin sa apuce sa-l editeze manual). Un meci pe care admin l-a editat deja
+  // (are locatia noua) nu mai intra aici, deci nu-i suprascriem alegerile facute manual.
   if (Array.isArray(data.matches)) {
     for (const m of data.matches) {
-      if (m.location === OLD_LOCATION) m.location = DEFAULT_CONFIG.location;
+      if (OLD_LOCATIONS.includes(m.location)) {
+        m.location = DEFAULT_CONFIG.location;
+        m.lat = DEFAULT_CONFIG.lat;
+        m.lon = DEFAULT_CONFIG.lon;
+        if (m.capacity === 15) m.capacity = DEFAULT_CONFIG.defaultCapacity;
+        if (JSON.stringify(m.priceTiers) === OLD_TIERS_JSON) {
+          m.priceTiers = DEFAULT_CONFIG.priceTiers.map((t) => Object.assign({}, t));
+        }
+      }
     }
   }
 }
