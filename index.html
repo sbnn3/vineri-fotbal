@@ -1162,29 +1162,6 @@
   let lastMatchData = null;
   let isAdminView = false;
 
-  // arata mesajul elegant "revenim miercuri" in locul formularului de inregistrare, daca
-  // serverul confirma ca inscrierile sunt inchise acum (Sambata-Marti); altfel arata formularul
-  // normal. Nu ne ghidam dupa ceasul telefonului — intrebam mereu serverul, ca sa fie corect
-  // pentru toata lumea indiferent de fusul orar setat pe telefon.
-  async function showRegisterOrClosed(){
-    try {
-      const status = await api(API.registrationStatus);
-      if (!status.open) {
-        const detalii = status.time ? ` Jucăm la <b>${escapeHtml(status.time)}</b>.` : '';
-        el('closed-message').innerHTML = `Înscrierile pentru meciul de <b>Vineri, ${escapeHtml(formatFullDateCap(status.matchDate))}</b> se deschid <b>Miercuri, ${escapeHtml(formatFullDateCap(status.opensAt))}</b>.${detalii} Revino atunci ca să-ți confirmi locul! ⚽`;
-        show('closed-screen');
-        showClosedLocation(status);
-        return;
-      }
-      hide('closed-location-card');
-    } catch (e) {
-      // daca nu putem afla starea inscrierilor, preferam sa aratam formularul normal —
-      // mai bine deschis din greseala decat blocat din greseala
-      hide('closed-location-card');
-    }
-    show('register-screen');
-  }
-
   // card separat cu locatia (harta Google Maps) si vremea pentru meciul urmator, afisat sub
   // mesajul elegant de "inscrieri inchise" — foloseste acelasi API de vreme ca ecranul principal,
   // care deja calculeaza prognoza pentru data meciului curent (nu pentru "azi")
@@ -1204,7 +1181,25 @@
 
   async function init(){
     hide('loading');
-    if (!currentToken) { await showRegisterOrClosed(); return; }
+
+    // Verificam ÎNTOTDEAUNA starea inscrierilor mai intai — inclusiv pentru cei care au deja
+    // cont salvat in telefon (au mai jucat inainte). Cand e inchis (Sambata-Marti), TOATA lumea
+    // vede acelasi ecran elegant, nu doar vizitatorii noi fara cont — meciul saptamanii viitoare
+    // e proaspat (nimeni nu e inca inscris cand fereastra e inchisa), deci nu exista nimic de
+    // gestionat pana se redeschide miercuri. Nu ne ghidam dupa ceasul telefonului — intrebam
+    // mereu serverul, ca sa fie corect pentru toata lumea indiferent de fusul orar setat local.
+    let status = null;
+    try { status = await api(API.registrationStatus); } catch (e) { status = null; }
+
+    if (status && status.open === false) {
+      const detalii = status.time ? ` Jucăm la <b>${escapeHtml(status.time)}</b>.` : '';
+      el('closed-message').innerHTML = `Înscrierile pentru meciul de <b>Vineri, ${escapeHtml(formatFullDateCap(status.matchDate))}</b> se deschid <b>Miercuri, ${escapeHtml(formatFullDateCap(status.opensAt))}</b>.${detalii} Revino atunci ca să-ți confirmi locul! ⚽`;
+      show('closed-screen');
+      showClosedLocation(status);
+      return;
+    }
+
+    if (!currentToken) { show('register-screen'); return; }
     try {
       const me = await api(`${API.me}?token=${encodeURIComponent(currentToken)}`);
       myName = me.name;
@@ -1213,7 +1208,7 @@
     } catch (e) {
       clearToken();
       currentToken = null;
-      await showRegisterOrClosed();
+      show('register-screen');
     }
   }
 

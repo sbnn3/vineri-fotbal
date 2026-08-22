@@ -79,6 +79,19 @@ function ensureConfig(data) {
       .filter((phone) => phone !== PROTECTED_ADMIN_PHONE)
       .map((phone) => ({ phone, addedAt: new Date().toISOString() }));
   }
+  // migrare: config-ul a fost salvat initial cu vechea denumire a locatiei ("O'Hanlon Park"),
+  // inainte sa fie redenumita "Celbridge Golf Range". DEFAULT_CONFIG de mai sus a fost actualizat
+  // de atunci, dar valoarea deja salvata are mereu prioritate (vezi Object.assign de mai sus), deci
+  // ramanea "inghetata" la numele vechi — inclusiv in meciurile deja create cu acel nume (de-asta
+  // aparea o denumire diferita pe ecrane diferite). O corectam automat aici, o singura data — si
+  // doar daca gasim exact vechea valoare, ca sa nu suprascriem vreo locatie aleasa manual de admin.
+  const OLD_LOCATION = "O'Hanlon Park, Celbridge";
+  if (data.config.location === OLD_LOCATION) data.config.location = DEFAULT_CONFIG.location;
+  if (Array.isArray(data.matches)) {
+    for (const m of data.matches) {
+      if (m.location === OLD_LOCATION) m.location = DEFAULT_CONFIG.location;
+    }
+  }
 }
 
 async function upstashGet() {
