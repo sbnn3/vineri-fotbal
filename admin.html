@@ -289,6 +289,21 @@
     background:var(--card-2); color:var(--white); font-family:inherit; font-weight:700; font-size:12px; cursor:pointer;
   }
 
+  /* ---- Blocare jucatori (disponibila DOAR aici, in Panoul admin) ---- */
+  .role-chip-blocked{ background:rgba(240,71,63,0.16); color:#ff8a83; border:1px solid rgba(240,71,63,0.4); }
+  .block-toggle-btn{
+    flex-shrink:0; padding:8px 12px; border-radius:9px; border:1px solid var(--card-border);
+    background:var(--card-2); color:var(--white); font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer;
+    white-space:nowrap;
+  }
+  .block-toggle-btn.do-block{ border-color:rgba(240,71,63,0.4); color:#ff8a83; }
+  .block-toggle-btn.do-unblock{ border-color:rgba(34,197,94,0.4); color:#5eeba3; }
+  .block-toggle-btn:active{ transform:translateY(1px); }
+  .block-toggle-btn:disabled{ opacity:.6; cursor:default; }
+  .blocked-manual{
+    margin-top:18px; padding-top:16px; border-top:1px solid var(--line);
+  }
+
   /* ---- Danger zone ---- */
   .danger-card{
     border:1px solid rgba(240,71,63,0.35);
@@ -484,9 +499,31 @@
 
     <div class="card" id="admins-card">
       <div class="card-title"><span class="em">👑</span> Administratori</div>
-      <p class="card-note" style="margin:0 0 14px;">Alege cine are acces la funcțiile de admin (scoate din listă, blochează, vede telefoane, marchează cash) — apar sau dispar automat, fără nicio modificare de cod. Fondatorul e mereu admin și nu poate fi schimbat de aici. Un jucător trebuie să se fi înregistrat cel puțin o dată ca să poată fi făcut admin. Cu 🗑️ ștergi definitiv un profil (de test, duplicat etc.) din bază — dispare complet, inclusiv din meciul curent, dacă era înscris.</p>
+      <p class="card-note" style="margin:0 0 14px;">Alege cine are acces la funcțiile de admin (scoate din listă, vede telefoane, marchează cash) — apar sau dispar automat, fără nicio modificare de cod. Fondatorul e mereu admin și nu poate fi schimbat de aici. Un jucător trebuie să se fi înregistrat cel puțin o dată ca să poată fi făcut admin. Cu 🗑️ ștergi definitiv un profil (de test, duplicat etc.) din bază — dispare complet, inclusiv din meciul curent, dacă era înscris. Blocarea jucătorilor nu mai face parte din drepturile de admin — e disponibilă doar mai jos, în secțiunea „Blocare jucători”.</p>
       <input type="text" id="admins-search" placeholder="Caută după nume sau telefon..." style="margin-bottom:14px;">
       <div id="admins-list"></div>
+    </div>
+
+    <div class="card" id="blocked-card">
+      <div class="card-title"><span class="em">🚫</span> Blocare jucători</div>
+      <p class="card-note" style="margin:0 0 14px;">Un jucător blocat nu se mai poate înregistra sau înscrie la meciuri — dacă era înscris în meciul curent, e scos automat din listă. Disponibilă doar aici, în Panoul admin — ceilalți administratori nu mai pot bloca direct din aplicație.</p>
+      <input type="text" id="blocked-search" placeholder="Caută după nume sau telefon..." style="margin-bottom:14px;">
+      <div id="blocked-players-list"></div>
+
+      <div class="blocked-manual">
+        <p class="card-note" style="margin:0 0 12px;">Nu găsești pe cineva în listă? Blochează direct după numărul de telefon, chiar dacă persoana nu s-a înregistrat încă:</p>
+        <div class="field-row">
+          <div class="field" style="margin-bottom:10px;">
+            <label class="field-label" for="blocked-manual-phone">Telefon</label>
+            <input type="text" id="blocked-manual-phone" placeholder="08xxxxxxxx">
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label class="field-label" for="blocked-manual-name">Nume (opțional)</label>
+            <input type="text" id="blocked-manual-name" placeholder="Nume">
+          </div>
+        </div>
+        <button type="button" class="block-toggle-btn do-block" id="blocked-manual-add" style="width:100%; padding:11px;">🚫 Blochează acest număr</button>
+      </div>
     </div>
 
   </div>
@@ -507,6 +544,8 @@
   let allAdminsPlayers = [];
   let founderPhone = null;
   let adminsSearchQuery = '';
+  let allBlockedEntries = [];
+  let blockedSearchQuery = '';
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -631,6 +670,7 @@
       el('topbar-actions').style.display = 'flex';
       renderData(data);
       loadAdmins();
+      loadBlocked();
       if (reason === 'login') showToast('Conectat cu succes ✅', 'ok');
       else if (reason === 'refresh') showToast('Actualizat ✅', 'ok');
     } catch (e) {
@@ -728,6 +768,7 @@
       allAdminsPlayers = data.players || [];
       founderPhone = data.founderPhone || null;
       renderAdminsList();
+      renderBlockedList(); // lista de blocare reuseste aceeasi lista de jucatori, re-randam si aici
     } catch (e) {
       showToast('Nu am putut contacta serverul pentru lista de administratori.', 'error');
     }
@@ -859,6 +900,151 @@
         yesBtn.disabled = false;
         yesBtn.textContent = 'Da, șterge';
       }
+    }
+  });
+
+  // ---------- Blocare jucatori (disponibila DOAR aici, in Panoul admin) ----------
+  async function loadBlocked(){
+    try {
+      const res = await fetch('/api/admin/blocked?key=' + encodeURIComponent(currentKey));
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Nu am putut încărca lista de blocați.', 'error'); return; }
+      allBlockedEntries = data.blocked || [];
+      renderBlockedList();
+    } catch (e) {
+      showToast('Nu am putut contacta serverul pentru lista de blocați.', 'error');
+    }
+  }
+
+  function findBlockedEntry(phone){
+    return allBlockedEntries.find((b) => b.phone === phone) || null;
+  }
+
+  function renderBlockedList(){
+    const q = blockedSearchQuery.trim().toLowerCase();
+
+    // pornim de la toti jucatorii inregistrati (aceeasi lista ca la Administratori) + adaugam
+    // eventualii blocati care nu s-au inregistrat niciodata (blocati direct dupa telefon, mai jos)
+    const registeredPhones = new Set(allAdminsPlayers.map((p) => p.phone));
+    const unregisteredBlocked = allBlockedEntries
+      .filter((b) => !registeredPhones.has(b.phone))
+      .map((b) => ({ id: null, name: b.name, phone: b.phone, role: null, unregistered: true }));
+    const combined = allAdminsPlayers.concat(unregisteredBlocked);
+
+    const list = combined.filter((p) => {
+      if (!q) return true;
+      return (p.name || '').toLowerCase().includes(q) || (p.phone || '').toLowerCase().includes(q);
+    });
+
+    const container = el('blocked-players-list');
+    if (!list.length) {
+      container.innerHTML = `<p class="admins-empty">${combined.length ? 'Niciun jucător nu se potrivește căutării.' : 'Niciun jucător înregistrat încă.'}</p>`;
+      return;
+    }
+
+    container.innerHTML = list.map((p) => {
+      const name = escapeHtml(p.name || 'Jucător');
+      const phone = escapeHtml(p.phone || '—');
+      const rawPhone = escapeHtml(p.phone || '');
+      if (p.role === 'founder') {
+        return `
+          <div class="admin-row">
+            <div class="admin-row-info">
+              <div class="admin-row-name">${name}</div>
+              <div class="admin-row-phone">${phone}</div>
+            </div>
+            <span class="role-chip role-chip-founder">Fondator</span>
+            <span class="admin-founder-fixed">Protejat</span>
+          </div>`;
+      }
+      const blockedEntry = findBlockedEntry(p.phone);
+      const isBlockedNow = Boolean(blockedEntry);
+      const chip = isBlockedNow ? '<span class="role-chip role-chip-blocked">🚫 Blocat</span>' : '';
+      const btnClass = isBlockedNow ? 'block-toggle-btn do-unblock' : 'block-toggle-btn do-block';
+      const btnLabel = isBlockedNow ? 'Deblochează' : 'Blochează';
+      const btnAction = isBlockedNow ? 'unblock' : 'block';
+      const blockedId = escapeHtml((blockedEntry && blockedEntry.id) || '');
+      return `
+        <div class="admin-row">
+          <div class="admin-row-info">
+            <div class="admin-row-name">${name}</div>
+            <div class="admin-row-phone">${phone}</div>
+          </div>
+          ${chip}
+          <button type="button" class="${btnClass}" data-phone="${rawPhone}" data-name="${name}" data-blocked-id="${blockedId}" data-action="${btnAction}">${btnLabel}</button>
+        </div>`;
+    }).join('');
+  }
+
+  el('blocked-search').addEventListener('input', (e) => {
+    blockedSearchQuery = e.target.value;
+    renderBlockedList();
+  });
+
+  el('blocked-players-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.block-toggle-btn');
+    if (!btn) return;
+    const phone = btn.dataset.phone;
+    const name = btn.dataset.name;
+    const action = btn.dataset.action; // 'block' | 'unblock'
+    if (!phone) return;
+
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = action === 'block' ? 'Se blochează...' : 'Se deblochează...';
+    try {
+      let res;
+      if (action === 'block') {
+        res = await fetch('/api/admin/block-player', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ key: currentKey, phone, name }),
+        });
+      } else {
+        res = await fetch('/api/admin/unblock-player', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ key: currentKey, blockedId: btn.dataset.blockedId }),
+        });
+      }
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Eroare la actualizarea blocării.', 'error'); return; }
+      showToast(action === 'block' ? 'Jucător blocat 🚫' : 'Jucător deblocat ✅', 'ok');
+      await loadBlocked();
+    } catch (err) {
+      showToast('Nu am putut contacta serverul.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
+
+  // ---------- Blocare manuala dupa telefon (pentru cineva care nu s-a inregistrat inca) ----------
+  el('blocked-manual-add').addEventListener('click', async () => {
+    const phone = el('blocked-manual-phone').value.trim();
+    const name = el('blocked-manual-name').value.trim();
+    if (!phone) { showToast('Introdu un număr de telefon.', 'error'); return; }
+
+    const btn = el('blocked-manual-add');
+    btn.disabled = true;
+    btn.textContent = 'Se blochează...';
+    try {
+      const res = await fetch('/api/admin/block-player', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ key: currentKey, phone, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Eroare la blocare.', 'error'); return; }
+      showToast('Număr blocat 🚫', 'ok');
+      el('blocked-manual-phone').value = '';
+      el('blocked-manual-name').value = '';
+      await loadBlocked();
+    } catch (err) {
+      showToast('Nu am putut contacta serverul.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🚫 Blochează acest număr';
     }
   });
 

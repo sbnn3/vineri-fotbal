@@ -361,49 +361,18 @@
     margin:-14px 0 18px !important;
   }
 
-  /* ---- Modal jucatori blocati (doar cei 3 admini) ---- */
-  .blocked-link{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    width:100%;
-    margin-top:18px;
-    padding:11px 14px;
-    border-radius:12px;
-    background:rgba(242,169,59,0.08);
-    border:1px solid rgba(242,169,59,0.3);
-    color:var(--amber);
-    font-family:inherit;
-    font-weight:700;
-    font-size:13.5px;
-    cursor:pointer;
-  }
-  .blocked-link:active{ transform:translateY(1px); }
-  .blocked-count-badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:20px;
-    height:20px;
-    padding:0 6px;
-    border-radius:999px;
-    background:var(--amber);
-    color:#04150d;
-    font-size:11.5px;
-    font-weight:800;
-  }
+  /* ---- Modal generic cu cap (titlu + buton de inchidere), folosit de modalul de regulament ---- */
   .modal-box.modal-box-wide{
     max-width:400px;
     text-align:left;
   }
-  .blocked-modal-head{
+  .modal-head{
     display:flex;
     align-items:center;
     justify-content:space-between;
     margin-bottom:16px;
   }
-  .blocked-modal-head p{
+  .modal-head p{
     margin:0;
     font-size:16px;
     font-weight:700;
@@ -425,53 +394,117 @@
     font-weight:400;
   }
   .modal-close-x:hover{ background:rgba(255,255,255,0.06); }
-  .blocked-modal-list{
-    max-height:50vh;
-    overflow-y:auto;
-  }
-  .blocked-row{
+
+  /* ---- Regulamentul grupului (afisat la "Particip" prima data + oricand din butonul dedicat) ---- */
+  .rules-link{
     display:flex;
     align-items:center;
-    gap:10px;
+    justify-content:space-between;
+    gap:8px;
+    width:100%;
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--card-border);
+    color:#fff;
+    font-family:inherit;
+    font-weight:700;
+    font-size:13.5px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .rules-link:active{ transform:translateY(1px); }
+  .rules-accepted-badge{
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:4px 9px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:800;
+    background:rgba(34,197,94,0.18);
+    color:#5eeba3;
+    border:1px solid rgba(34,197,94,0.4);
+  }
+  .rules-content{ max-height:52vh; overflow-y:auto; }
+  .rules-content.rules-content-compact{ max-height:30vh; }
+  .rules-list{
+    list-style:none;
+    margin:0 0 16px;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .rules-list li{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
     background:rgba(255,255,255,0.04);
     border:1px solid var(--card-border);
     border-radius:12px;
-    padding:10px 12px;
-    margin-bottom:8px;
+    padding:10px 11px;
   }
-  .blocked-row:last-child{ margin-bottom:0; }
-  .blocked-row-info{ flex:1; min-width:0; }
-  .blocked-row-name{
-    font-weight:700;
-    font-size:14px;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .blocked-row-meta{
-    font-size:11.5px;
-    color:var(--muted);
-    font-weight:600;
-    margin-top:2px;
-  }
-  .unblock-btn{
+  .rule-num{
     flex-shrink:0;
-    width:auto;
-    margin-top:0;
-    text-transform:none;
-    letter-spacing:normal;
-    padding:8px 14px;
-    border-radius:10px;
-    border:1px solid rgba(34,197,94,0.4);
-    background:rgba(34,197,94,0.14);
-    color:#5eeba3;
-    font-family:inherit;
+    width:20px;
+    height:20px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:12px;
+    color:#04150d;
+    background:linear-gradient(160deg, var(--grass), var(--grass-2));
+  }
+  .rule-icon{ flex-shrink:0; font-size:15px; line-height:1.4; }
+  .rule-text{ font-size:13px; font-weight:600; color:var(--white); line-height:1.48; }
+  .rules-tagline{
+    text-align:center;
     font-weight:700;
-    font-size:12.5px;
+    font-size:12px;
+    letter-spacing:.04em;
+    color:var(--amber);
+    margin:12px 0 4px;
+  }
+  .rules-motto{
+    text-align:center;
+    font-family:'Bebas Neue',sans-serif;
+    letter-spacing:.06em;
+    font-size:16px;
+    color:var(--grass);
+    margin-bottom:2px;
+  }
+  .rules-agree-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    background:rgba(244,196,48,0.08);
+    border:1px solid rgba(244,196,48,0.3);
+    border-radius:12px;
+    padding:12px 14px;
+    margin:14px 0 18px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .rules-agree-row input[type=checkbox]{
+    flex-shrink:0;
+    width:20px;
+    height:20px;
+    margin-top:1px;
+    accent-color:var(--grass);
     cursor:pointer;
   }
-  .unblock-btn:active{ transform:translateY(1px); }
-  .unblock-btn:disabled{ opacity:.6; cursor:default; }
+  .rules-agree-row span{
+    font-size:13px;
+    font-weight:600;
+    color:var(--white);
+    line-height:1.45;
+  }
+  .pay-option:disabled{ opacity:.4; cursor:not-allowed; }
 
   /* ---- Register form ---- */
   label{
@@ -810,7 +843,7 @@
   .pay-badge-cash.is-paid{ background:rgba(34,197,94,0.32); color:#a4f6c8; }
 
   /* ---- Controale admin (doar cei 3 recunoscuti dupa telefon) ---- */
-  .kick-btn, .block-btn, .call-btn, .pay-toggle{
+  .kick-btn, .call-btn, .pay-toggle{
     width:auto;
     margin-top:0;
     text-transform:none;
@@ -818,9 +851,9 @@
     font-family:inherit;
     cursor:pointer;
   }
-  /* icoanele de actiune (apel/blocare/kick) stau discrete, neutre — apasarea deschide direct
+  /* icoanele de actiune (apel/kick) stau discrete, neutre — apasarea deschide direct
      un modal de confirmare (Da/Nu), nu mai exista stare "armata" ---- */
-  .kick-btn, .block-btn, .call-btn{
+  .kick-btn, .call-btn{
     flex-shrink:0;
     width:23px; height:23px;
     border-radius:50%;
@@ -834,7 +867,7 @@
     line-height:1;
     transition:background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
   }
-  .kick-btn:active, .block-btn:active, .call-btn:active{ transform:scale(0.92); }
+  .kick-btn:active, .call-btn:active{ transform:scale(0.92); }
   .call-btn{
     color:#7fe3a8;
     text-decoration:none;
@@ -1031,7 +1064,10 @@
         <a href="#" id="btn-maps" class="btn-maps" target="_blank" rel="noopener">Deschide în Google Maps ↗</a>
       </div>
 
-      <button type="button" id="btn-open-blocked" class="blocked-link hidden">🚫 Jucători blocați <span id="blocked-count" class="blocked-count-badge">0</span></button>
+      <button type="button" id="btn-view-rules" class="rules-link">
+        <span>📋 Regulamentul grupului</span>
+        <span id="rules-accepted-badge" class="rules-accepted-badge hidden">✅ Acceptat</span>
+      </button>
 
       <div class="section-title starters"><span class="dot"></span>Titulari</div>
       <ol class="squad" id="confirmed-list"></ol>
@@ -1064,7 +1100,19 @@
 </div>
 
 <div id="join-modal" class="modal-overlay hidden">
-  <div class="modal-box">
+  <div class="modal-box" id="join-modal-box">
+    <!-- Sectiunea de regulament + bifa obligatorie apare doar prima data, cand jucatorul inca nu
+         a acceptat regulamentul (vezi lastMatchData.rulesAccepted) — dupa ce a bifat si a apasat o
+         data metoda de plata, nu mai apare deloc, nici la meciurile viitoare ---- -->
+    <div id="join-modal-rules" class="hidden">
+      <div class="modal-head"><p>📋 Regulamentul grupului</p></div>
+      <div class="rules-content rules-content-compact" id="join-modal-rules-content"></div>
+      <label class="rules-agree-row" for="join-modal-agree">
+        <input type="checkbox" id="join-modal-agree">
+        <span>Am citit și sunt de acord cu regulamentul de mai sus.</span>
+      </label>
+    </div>
+
     <p id="join-modal-text">Cum vrei să achiți <b id="join-modal-price">5€</b>, costul locului tău?</p>
     <p class="modal-subnote">Alegi doar metoda — nu trebuie să plătești acum.</p>
     <div class="modal-pay-choice">
@@ -1074,18 +1122,19 @@
   </div>
 </div>
 
-<div id="blocked-modal" class="modal-overlay hidden">
+<!-- Modal cu regulamentul grupului, doar de vizualizare — deschis oricand din butonul dedicat de
+     pe ecranul principal, nu cere nicio bifa (acceptarea se cere o singura data, la "Particip") ---- -->
+<div id="rules-modal" class="modal-overlay hidden">
   <div class="modal-box modal-box-wide">
-    <div class="blocked-modal-head">
-      <p>🚫 Jucători blocați</p>
-      <button type="button" id="blocked-modal-close" class="modal-close-x" aria-label="Închide">×</button>
+    <div class="modal-head">
+      <p>📋 Regulamentul grupului</p>
+      <button type="button" id="rules-modal-close" class="modal-close-x" aria-label="Închide">×</button>
     </div>
-    <div class="blocked-modal-list" id="blocked-modal-list"></div>
-    <p class="empty" id="blocked-modal-empty">Niciun jucător blocat momentan.</p>
+    <div class="rules-content" id="rules-modal-content"></div>
   </div>
 </div>
 
-<!-- Modal generic de confirmare (Da/Nu), refolosit pentru scoate din listă / blochează / deblochează -->
+<!-- Modal generic de confirmare (Da/Nu), refolosit pentru scoate din listă -->
 <div id="confirm-modal" class="modal-overlay hidden">
   <div class="modal-box">
     <p id="confirm-modal-text">Ești sigur?</p>
@@ -1108,8 +1157,6 @@
     registrationStatus: '/api/registration-status',
     kick: '/api/admin/kick',
     markPaid: '/api/admin/mark-paid',
-    block: '/api/admin/block',
-    unblock: '/api/admin/unblock',
   };
 
   function formatEuro(n){
@@ -1141,6 +1188,25 @@
     const [y,m,d] = iso.split('-').map(Number);
     const luna = LUNI_FULL[m-1];
     return `${d} ${luna.charAt(0).toUpperCase()}${luna.slice(1)}`;
+  }
+
+  // ---- Regulamentul grupului — un singur loc, folosit atat in modalul de la "Particip" (prima
+  // data, cu bifa obligatorie) cat si in modalul de vizualizare, deschis oricand din butonul dedicat ----
+  const RULES = [
+    { icon: '🚫', text: 'Crampoanele sunt interzise la toate meciurile organizate.' },
+    { icon: '🤝', text: 'Respectă toți participanții. Nu sunt admise înjurăturile, comportamentul agresiv, provocările sau amenințările.' },
+    { icon: '⛔', text: 'Violența fizică, instigarea la ură și orice altercație duc la blocarea definitivă.' },
+    { icon: '📅', text: 'Dacă îți confirmi prezența la meci, te rugăm să respecți angajamentul făcut. Neprezentarea fără anunț poate duce la blocarea definitivă.' },
+    { icon: '💳', text: 'Plata pentru meciuri se poate efectua prin Revolut sau cash, la finalul meciului.' },
+    { icon: '👀', text: 'Grupul este monitorizat de administratori. Nerespectarea regulamentului poate duce la blocare fără avertisment.' },
+  ];
+  function rulesHtml(){
+    const items = RULES.map((r, i) => `<li><span class="rule-num">${i+1}</span><span class="rule-icon">${r.icon}</span><span class="rule-text">${escapeHtml(r.text)}</span></li>`).join('');
+    return `
+      <ol class="rules-list">${items}</ol>
+      <div class="rules-tagline">Respect • Fair-Play • Disciplină • Prietenie</div>
+      <div class="rules-motto">NO EXCUSES. JUST FOOTBALL!</div>
+    `;
   }
 
   function getToken(){
@@ -1264,8 +1330,7 @@
   function renderMatch(data){
     lastMatchData = data;
     isAdminView = Boolean(data.isAdmin);
-    el('btn-open-blocked').classList.toggle('hidden', !isAdminView);
-    if (isAdminView) el('blocked-count').textContent = (data.blocked || []).length;
+    el('rules-accepted-badge').classList.toggle('hidden', !data.rulesAccepted);
     const m = data.match;
     const { zi, text } = formatDateParts(m.date);
     el('match-day').textContent = zi.toUpperCase();
@@ -1373,17 +1438,14 @@
         : '';
       const isSelf = p.playerId === currentToken;
       // contul proprietarului e protejat integral — nimeni, nici ceilalti admini, nu are voie
-      // sa-l scoata din lista sau sa-l blocheze, asa ca ii ascundem butoanele astea oricui
+      // sa-l scoata din lista, asa ca ii ascundem butonul asta oricui
       // (p.protected e independent de eticheta afisata — toti cei 3 admini arata "Administrator")
       const hideDestructive = isSelf || p.protected;
       const kickBtn = hideDestructive
         ? ''
         : `<button type="button" class="kick-btn" data-pid="${p.playerId}" data-pname="${escapeHtml(p.name)}" title="Scoate din listă">✕</button>`;
-      const blockBtn = hideDestructive
-        ? ''
-        : `<button type="button" class="block-btn" data-pid="${p.playerId}" data-pname="${escapeHtml(p.name)}" title="Blochează acest jucător (nu se mai poate înscrie)">⊘</button>`;
       // iconițele de acțiune stau lipite lângă nume, iar statusul de plată rămâne singur, ancorat în dreapta
-      const actionIcons = `<span class="prow-icons">${callBtn}${blockBtn}${kickBtn}</span>`;
+      const actionIcons = `<span class="prow-icons">${callBtn}${kickBtn}</span>`;
       const rightGroup = `<span class="prow-right">${paymentBadge(p)}</span>`;
       return `<li class="${isMe ? 'me' : ''}">${identity}${actionIcons}${rightGroup}</li>`;
     }
@@ -1475,84 +1537,64 @@
     if (action) action();
   });
 
+  // regulamentul trebuie acceptat o singura data (bifa) — daca a fost deja acceptat, modalul de
+  // "Particip" arata direct alegerea metodei de plata, fara sectiunea de regulament
+  function joinModalNeedsRules(){
+    return !(lastMatchData && lastMatchData.rulesAccepted);
+  }
+  function setJoinModalPayEnabled(enabled){
+    el('join-modal-revolut').disabled = !enabled;
+    el('join-modal-cash').disabled = !enabled;
+  }
   function openJoinModal(){
     const pricing = lastMatchData && lastMatchData.pricing;
     el('join-modal-price').textContent = pricing ? formatEuro(pricing.perPlayer) : '';
+    const needsRules = joinModalNeedsRules();
+    el('join-modal-rules').classList.toggle('hidden', !needsRules);
+    el('join-modal-box').classList.toggle('modal-box-wide', needsRules);
+    if (needsRules) {
+      el('join-modal-rules-content').innerHTML = rulesHtml();
+      el('join-modal-agree').checked = false;
+      setJoinModalPayEnabled(false);
+    } else {
+      setJoinModalPayEnabled(true);
+    }
     show('join-modal');
   }
   function closeJoinModal(){ hide('join-modal'); }
 
+  el('join-modal-agree').addEventListener('change', (e) => {
+    setJoinModalPayEnabled(e.target.checked);
+  });
+
   el('join-modal-revolut').addEventListener('click', () => {
+    if (el('join-modal-revolut').disabled) return;
+    const acceptRules = joinModalNeedsRules();
     closeJoinModal();
-    doRsvp('join', 'revolut');
+    doRsvp('join', 'revolut', acceptRules);
   });
   el('join-modal-cash').addEventListener('click', () => {
+    if (el('join-modal-cash').disabled) return;
+    const acceptRules = joinModalNeedsRules();
     closeJoinModal();
-    doRsvp('join', 'cash');
+    doRsvp('join', 'cash', acceptRules);
   });
 
-  // ---- Modal jucători blocați (doar cei 3 admini recunoscuți după telefon) ----
-  function renderBlockedModalList(list){
-    const wrap = el('blocked-modal-list');
-    if (!list || !list.length) {
-      wrap.innerHTML = '';
-      show('blocked-modal-empty');
-      return;
-    }
-    hide('blocked-modal-empty');
-    const sorted = list.slice().sort((a, b) => String(b.blockedAt || '').localeCompare(String(a.blockedAt || '')));
-    wrap.innerHTML = sorted.map((b) => `
-      <div class="blocked-row">
-        <div class="blocked-row-info">
-          <div class="blocked-row-name">${escapeHtml(b.name || '—')}</div>
-          <div class="blocked-row-meta">${escapeHtml(b.phone || '—')}</div>
-        </div>
-        <button type="button" class="unblock-btn" data-bid="${b.id}" data-bname="${escapeHtml(b.name || 'acest jucător')}">Deblochează</button>
-      </div>
-    `).join('');
-  }
-
-  function openBlockedModal(){
-    renderBlockedModalList((lastMatchData && lastMatchData.blocked) || []);
-    show('blocked-modal');
-  }
-  function closeBlockedModal(){ hide('blocked-modal'); }
-
-  el('btn-open-blocked').addEventListener('click', openBlockedModal);
-  el('blocked-modal-close').addEventListener('click', closeBlockedModal);
-  el('blocked-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'blocked-modal') closeBlockedModal(); // click pe fundal, in afara cardului
+  // ---- Modal cu regulamentul grupului, doar de vizualizare — deschis oricand, pentru toata lumea ----
+  el('btn-view-rules').addEventListener('click', () => {
+    el('rules-modal-content').innerHTML = rulesHtml();
+    show('rules-modal');
+  });
+  el('rules-modal-close').addEventListener('click', () => hide('rules-modal'));
+  el('rules-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'rules-modal') hide('rules-modal'); // click pe fundal, in afara cardului
   });
 
-  el('blocked-modal-list').addEventListener('click', (e) => {
-    const btn = e.target.closest('.unblock-btn');
-    if (!btn) return;
-    const blockedId = btn.dataset.bid;
-    const name = escapeHtml(btn.dataset.bname || 'acest jucător');
-    openConfirmModal(`Ești sigur că vrei să deblochezi pe <b>${name}</b>? Se va putea înscrie din nou.`, async () => {
-      btn.disabled = true;
-      btn.textContent = 'Se deblochează...';
-      try {
-        const data = await api(API.unblock, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ token: currentToken, blockedId }),
-        });
-        renderMatch(data);
-        renderBlockedModalList(data.blocked || []);
-      } catch (err) {
-        el('rsvp-error').textContent = err.message;
-        show('rsvp-error');
-        btn.disabled = false;
-        btn.textContent = 'Deblochează';
-      }
-    });
-  });
-
-  async function doRsvp(action, payment){
+  async function doRsvp(action, payment, acceptRules){
     try {
       const body = { token: currentToken, action };
       if (action === 'join' && payment) body.payment = payment;
+      if (action === 'join' && acceptRules) body.acceptRules = true;
       const data = await api(API.rsvp, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1591,7 +1633,8 @@
   el('btn-change-revolut').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
   el('btn-change-cash').addEventListener('click', (e) => { e.preventDefault(); setPayment(null); });
 
-  // ---- Controale admin (doar cei 3 recunoscuti dupa telefon): scoate din listă + blochează + marchează cash încasat ----
+  // ---- Controale admin (doar cei 3 recunoscuti dupa telefon): scoate din listă + marchează cash încasat.
+  // Blocarea jucătorilor nu mai e posibilă de aici — e disponibilă doar din Panoul admin (vezi admin.html). ----
   // Apasarea deschide un modal de confirmare (Da/Nu) — nu se intampla nimic pana nu se apasa "Da".
   document.addEventListener('click', async (e) => {
     const kickBtn = e.target.closest('.kick-btn');
@@ -1601,26 +1644,6 @@
       openConfirmModal(`Ești sigur că vrei să scoți din listă pe <b>${name}</b>?`, async () => {
         try {
           const data = await api(API.kick, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ token: currentToken, playerId: pid }),
-          });
-          renderMatch(data);
-        } catch (err) {
-          el('rsvp-error').textContent = err.message;
-          show('rsvp-error');
-        }
-      });
-      return;
-    }
-
-    const blockBtn = e.target.closest('.block-btn');
-    if (blockBtn) {
-      const pid = blockBtn.dataset.pid;
-      const name = escapeHtml(blockBtn.dataset.pname || 'acest jucător');
-      openConfirmModal(`Ești sigur că vrei să blochezi pe <b>${name}</b>? Nu se va mai putea înscrie ulterior.`, async () => {
-        try {
-          const data = await api(API.block, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ token: currentToken, playerId: pid }),
