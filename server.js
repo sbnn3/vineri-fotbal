@@ -220,14 +220,14 @@ function addDaysISO(dateISO, days) {
   return dt.toISOString().slice(0, 10);
 }
 
-// Fereastra de inscrieri: deschisa Miercuri-Vineri (pentru meciul de vineri care tocmai vine),
-// inchisa Sambata-Marti (dupa ce meciul saptamanii s-a jucat si pana se deschide urmatorul).
+// Fereastra de inscrieri: deschisa Luni-Vineri (pentru meciul de vineri care tocmai vine),
+// inchisa Sambata-Duminica (dupa ce meciul saptamanii s-a jucat si pana se deschide urmatoarea saptamana).
 // Se recalculeaza automat din ziua curenta (fus orar Europe/Dublin), fara nicio interventie
 // manuala saptamanala — nextFridayISO() gaseste mereu vinerea corecta, indiferent de zi.
 function isRegistrationOpen() {
   const { y, m, d } = dublinTodayParts();
   const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=Duminica ... 6=Sambata
-  return dow === 3 || dow === 4 || dow === 5; // Miercuri, Joi, Vineri
+  return dow === 1 || dow === 2 || dow === 3 || dow === 4 || dow === 5; // Luni, Marti, Miercuri, Joi, Vineri
 }
 
 function normalizePhone(phone) {
@@ -1018,8 +1018,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ---- API: starea ferestrei de inscrieri (fara cheie, publica) — folosita de ecranul de
-    // inregistrare, ca sa arate mesajul elegant "revenim miercuri" in loc de formular, cand
-    // inscrierile sunt inchise (Sambata-Marti). Se recalculeaza automat in fiecare saptamana.
+    // inregistrare, ca sa arate mesajul elegant "revenim luni" in loc de formular, cand
+    // inscrierile sunt inchise (Sambata-Duminica). Se recalculeaza automat in fiecare saptamana.
     if (pathname === '/api/registration-status' && req.method === 'GET') {
       const data = getData();
       const match = await getOrCreateCurrentMatch(data);
@@ -1027,7 +1027,7 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, {
         open,
         matchDate: match.date,
-        opensAt: open ? null : addDaysISO(match.date, -2), // miercurea dinaintea acelui vineri
+        opensAt: open ? null : addDaysISO(match.date, -4), // lunea dinaintea acelui vineri
         time: match.time,
         location: match.location,
       });

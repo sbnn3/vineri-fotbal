@@ -986,7 +986,7 @@
     <p style="margin-top:14px;font-size:12px; color:var(--muted); font-weight:600;">Dacă te-ai mai înregistrat, introdu același număr de telefon și te recunoaștem automat.</p>
   </div>
 
-  <!-- Ecran "inscrieri inchise temporar" (Sambata-Marti) — inlocuieste ecranul de inregistrare
+  <!-- Ecran "inscrieri inchise temporar" (Sambata-Duminica) — inlocuieste ecranul de inregistrare
        pentru cei fara sesiune salvata; se afiseaza doar cand serverul confirma ca e inchis
        (vezi API.registrationStatus), nu se ghideaza dupa ceasul telefonului -->
   <div id="closed-screen" class="card hidden" style="text-align:center;">
@@ -1261,17 +1261,17 @@
     hide('loading');
 
     // Verificam ÎNTOTDEAUNA starea inscrierilor mai intai — inclusiv pentru cei care au deja
-    // cont salvat in telefon (au mai jucat inainte). Cand e inchis (Sambata-Marti), TOATA lumea
+    // cont salvat in telefon (au mai jucat inainte). Cand e inchis (Sambata-Duminica), TOATA lumea
     // vede acelasi ecran elegant, nu doar vizitatorii noi fara cont — meciul saptamanii viitoare
     // e proaspat (nimeni nu e inca inscris cand fereastra e inchisa), deci nu exista nimic de
-    // gestionat pana se redeschide miercuri. Nu ne ghidam dupa ceasul telefonului — intrebam
+    // gestionat pana se redeschide luni. Nu ne ghidam dupa ceasul telefonului — intrebam
     // mereu serverul, ca sa fie corect pentru toata lumea indiferent de fusul orar setat local.
     let status = null;
     try { status = await api(API.registrationStatus); } catch (e) { status = null; }
 
     if (status && status.open === false) {
       const detalii = status.time ? ` Jucăm la <b>${escapeHtml(status.time)}</b>.` : '';
-      el('closed-message').innerHTML = `Înscrierile pentru meciul de <b>Vineri, ${escapeHtml(formatFullDateCap(status.matchDate))}</b> se deschid <b>Miercuri, ${escapeHtml(formatFullDateCap(status.opensAt))}</b>.${detalii} Revino atunci ca să-ți confirmi locul! ⚽`;
+      el('closed-message').innerHTML = `Înscrierile pentru meciul de <b>Vineri, ${escapeHtml(formatFullDateCap(status.matchDate))}</b> se deschid <b>Luni, ${escapeHtml(formatFullDateCap(status.opensAt))}</b>.${detalii} Revino atunci ca să-ți confirmi locul! ⚽`;
       show('closed-screen');
       showClosedLocation(status);
       return;
