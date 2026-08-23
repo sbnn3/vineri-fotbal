@@ -636,7 +636,7 @@ async function vonageStartVerify(phoneE164) {
     headers: { Authorization: vonageAuthHeader(), 'Content-Type': 'application/json' },
     body: JSON.stringify({
       brand: VONAGE_BRAND_NAME,
-      code_length: 6,
+      code_length: 4,
       workflow: [{ channel: 'sms', to: phoneE164 }],
     }),
   });
