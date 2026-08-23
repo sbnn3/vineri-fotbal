@@ -22,16 +22,6 @@ const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const UPSTASH_KEY = 'vineri-fotbal-data';
 const upstashEnabled = Boolean(UPSTASH_URL && UPSTASH_TOKEN);
 
-// Verificare telefon prin cod SMS (Vonage Verify v2) la inregistrare — fara ea, oricine poate
-// scrie orice numar de telefon inventat si trece de blocare (vezi isBlocked mai jos: blocarea
-// se bazeaza pe ce introduce omul, nu pe o identitate verificata). Cu codul SMS, ca sa ocolesti
-// o blocare ai avea nevoie de un telefon real, diferit, la care sa ai acces — nu doar de cifre
-// noi. Foloseste Basic Auth (API key + secret), suficient pentru canalul SMS (vezi vonageAuthHeader).
-const VONAGE_API_KEY = process.env.VONAGE_API_KEY;
-const VONAGE_API_SECRET = process.env.VONAGE_API_SECRET;
-const VONAGE_BRAND_NAME = process.env.VONAGE_BRAND_NAME || 'Vineri Fotbal';
-const vonageEnabled = Boolean(VONAGE_API_KEY && VONAGE_API_SECRET);
-
 // Doar aceste fisiere sunt servite public (nu expunem server.js, package.json, data.json etc.)
 const STATIC_FILES = {
   '/': 'index.html',
@@ -240,20 +230,14 @@ function isRegistrationOpen() {
   return dow === 1 || dow === 2 || dow === 3 || dow === 4 || dow === 5; // Luni, Marti, Miercuri, Joi, Vineri
 }
 
-// Multi jucatori din grup au numere din afara Irlandei (Romania, Moldova, etc.), nu doar
-// irlandeze — normalizarea de mai jos NU respinge/schimba numerele straine, doar aduce
-// numerele irlandeze mereu la aceeasi forma locala (0xxxxxxxx), indiferent cum au fost scrise
-// (0891234567, +353891234567, 00353891234567 sau 353891234567) — asa au fost tratate
-// dintotdeauna in aplicatie (ADMIN_PHONES, blocarea, recunoasterea jucatorilor, etc, toate in
-// acest format). Numerele straine raman in format international "+<cod tara><numar>".
 function normalizePhone(phone) {
   let p = String(phone || '').replace(/[^\d+]/g, '');
   if (!p) return '';
-  // prefixul international "00" (des folosit in Europa in loc de "+") il aducem la forma cu
-  // "+", ca sa avem un singur format canonic mai departe pentru numerele straine
-  // (ex: "0040712345678" -> "+40712345678")
-  if (p.startsWith('00')) p = '+' + p.slice(2);
+  // numerele irlandeze pot fi scrise ca 08xxxxxxxx sau +3538xxxxxxxx / 003538xxxxxxxx —
+  // le aducem la aceeasi forma (0xxxxxxxx) ca sa fie recunoscute drept acelasi numar
+  // (ex: 0891234567 si +353891234567 trebuie sa se potriveasca la blocare / recunoastere admin)
   if (p.startsWith('+353')) p = '0' + p.slice(4);
+  else if (p.startsWith('00353')) p = '0' + p.slice(5);
   else if (/^353\d{7,9}$/.test(p)) p = '0' + p.slice(3);
   return p;
 }
@@ -619,76 +603,6 @@ function isBlocked(data, phone, name) {
   );
 }
 
-// ---------- Verificare telefon prin cod SMS (Vonage Verify v2) ----------
-
-// converteste numarul normalizat (vezi normalizePhone) in format E.164 ("+<cod tara><numar>"),
-// asa cum il cere API-ul Vonage — numerele straine sunt deja in acest format (incep cu "+"),
-// doar cele irlandeze locale (0xxxxxxxx) trebuie completate cu prefixul Irlandei
-function toE164(normalizedPhone) {
-  if (normalizedPhone.startsWith('+')) return normalizedPhone;
-  if (normalizedPhone.startsWith('0')) return '+353' + normalizedPhone.slice(1);
-  return normalizedPhone;
-}
-
-function vonageAuthHeader() {
-  const token = Buffer.from(`${VONAGE_API_KEY}:${VONAGE_API_SECRET}`).toString('base64');
-  return `Basic ${token}`;
-}
-
-// porneste o verificare noua — Vonage genereaza codul, il trimite prin SMS si tine el evidenta
-// expirarii/incercarilor; noi primim doar un request_id pe care il folosim la pasul de verificare
-async function vonageStartVerify(phoneE164) {
-  const res = await fetch('https://api.nexmo.com/v2/verify', {
-    method: 'POST',
-    headers: { Authorization: vonageAuthHeader(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      brand: VONAGE_BRAND_NAME,
-      code_length: 4,
-      workflow: [{ channel: 'sms', to: phoneE164 }],
-    }),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(json.title || json.detail || 'Nu am putut trimite codul SMS.');
-    err.vonageStatus = res.status;
-    err.vonageBody = json;
-    throw err;
-  }
-  return json.request_id;
-}
-
-// verifica codul introdus de utilizator pentru o cerere pornita mai devreme cu vonageStartVerify
-async function vonageCheckCode(requestId, code) {
-  const res = await fetch(`https://api.nexmo.com/v2/verify/${encodeURIComponent(requestId)}`, {
-    method: 'POST',
-    headers: { Authorization: vonageAuthHeader(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
-  });
-  if (res.status === 200) return;
-  const json = await res.json().catch(() => ({}));
-  const err = new Error(json.title || json.detail || 'Cod incorect.');
-  err.vonageStatus = res.status;
-  err.vonageBody = json;
-  throw err;
-}
-
-const VERIFY_RATE_LIMIT = 3; // maxim 3 coduri SMS trimise pe ora, per numar de telefon (anti-abuz cost)
-const VERIFY_RATE_WINDOW_MS = 60 * 60 * 1000;
-const VERIFY_CODE_TTL_MS = 10 * 60 * 1000; // pastram cererea in asteptare max 10 min (codul Vonage expira mai repede)
-
-// curata cererile de verificare expirate si istoricul de rate-limit mai vechi de o ora — apelata la
-// inceputul ambelor endpoint-uri /api/verify/*, ca sa nu creasca la nesfarsit in data.json/Redis
-function pruneVerifyState(data) {
-  const now = Date.now();
-  if (!data.verifyAttempts) data.verifyAttempts = {};
-  for (const phone of Object.keys(data.verifyAttempts)) {
-    data.verifyAttempts[phone] = data.verifyAttempts[phone].filter((ts) => now - ts < VERIFY_RATE_WINDOW_MS);
-    if (data.verifyAttempts[phone].length === 0) delete data.verifyAttempts[phone];
-  }
-  if (!Array.isArray(data.pendingVerifications)) data.pendingVerifications = [];
-  data.pendingVerifications = data.pendingVerifications.filter((v) => now - v.createdAt < VERIFY_CODE_TTL_MS);
-}
-
 // ---------- Server HTTP ----------
 
 const MIME = {
@@ -744,98 +658,22 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsed.pathname;
 
   try {
-    // ---- API: inregistrare / recuperare jucator dupa telefon — pasul 1: trimite cod SMS ----
-    // Inlocuieste vechiul /api/register (fara verificare), care permitea oricui sa introduca un
-    // numar de telefon inventat si sa treaca de blocare (vezi isBlocked mai jos) sau chiar sa
-    // "recupereze" contul altcuiva doar stiindu-i numarul. Acum, contul (nou sau recuperat) se
-    // creeaza abia la pasul 2 (/api/verify/check), dupa ce omul dovedeste ca detine chiar el
-    // numarul introdus.
-    if (pathname === '/api/verify/start' && req.method === 'POST') {
-      if (!vonageEnabled) {
-        return sendJSON(res, 500, { error: 'Verificarea prin SMS nu este configurată pe server. Contactează un administrator.' });
-      }
+    // ---- API: inregistrare / recuperare jucator dupa telefon ----
+    if (pathname === '/api/register' && req.method === 'POST') {
       const body = await readBody(req);
       const name = String(body.name || '').trim();
       const phone = String(body.phone || '').trim();
       if (!name || !phone) return sendJSON(res, 400, { error: 'Numele si telefonul sunt obligatorii.' });
 
-      const normPhone = normalizePhone(phone);
-      // acceptam fie forma locala irlandeza (0xxxxxxxx), fie orice numar international
-      // in format E.164 (+<cod tara><numar>) — multi jucatori au numere de Romania, Moldova etc.
-      const isValidPhone = /^0\d{8,9}$/.test(normPhone) || /^\+\d{8,15}$/.test(normPhone);
-      if (!isValidPhone) {
-        return sendJSON(res, 400, { error: 'Numărul de telefon nu pare valid.' });
-      }
-
       const data = getData();
-      // blocam inainte sa trimitem SMS-ul, ca sa nu cheltuim bani pe cineva deja blocat
       if (isBlocked(data, phone, name)) {
         return sendJSON(res, 403, { error: 'Acest număr sau nume a fost blocat de organizatori. Dacă e o greșeală, contactează-i direct.' });
       }
-
-      pruneVerifyState(data);
-      const attempts = data.verifyAttempts[normPhone] || [];
-      if (attempts.length >= VERIFY_RATE_LIMIT) {
-        return sendJSON(res, 429, { error: 'Ai cerut prea multe coduri pentru acest număr. Mai încearcă peste o oră.' });
-      }
-
-      let requestId;
-      try {
-        requestId = await vonageStartVerify(toE164(normPhone));
-      } catch (e) {
-        console.error('Vonage start verify a esuat:', e.vonageStatus, e.vonageBody || e.message);
-        return sendJSON(res, 502, { error: 'Nu am putut trimite codul SMS acum. Mai încearcă în câteva minute.' });
-      }
-
-      attempts.push(Date.now());
-      data.verifyAttempts[normPhone] = attempts;
-      data.pendingVerifications.push({ requestId, phone: normPhone, name, createdAt: Date.now() });
-      await persist(data);
-
-      return sendJSON(res, 200, { requestId });
-    }
-
-    // ---- API: inregistrare / recuperare jucator dupa telefon — pasul 2: verifica codul SMS ----
-    if (pathname === '/api/verify/check' && req.method === 'POST') {
-      if (!vonageEnabled) {
-        return sendJSON(res, 500, { error: 'Verificarea prin SMS nu este configurată pe server. Contactează un administrator.' });
-      }
-      const body = await readBody(req);
-      const requestId = String(body.requestId || '').trim();
-      const code = String(body.code || '').trim();
-      if (!requestId || !code) return sendJSON(res, 400, { error: 'Lipsește codul.' });
-
-      const data = getData();
-      pruneVerifyState(data);
-      const pending = data.pendingVerifications.find((v) => v.requestId === requestId);
-      if (!pending) {
-        return sendJSON(res, 410, { error: 'Codul a expirat. Cere unul nou.' });
-      }
-
-      try {
-        await vonageCheckCode(requestId, code);
-      } catch (e) {
-        console.error('Vonage check code a esuat:', e.vonageStatus, e.vonageBody || e.message);
-        if (e.vonageStatus === 404 || e.vonageStatus === 410) {
-          return sendJSON(res, 410, { error: 'Codul a expirat. Cere unul nou.' });
-        }
-        return sendJSON(res, 400, { error: 'Cod incorect. Mai încearcă.' });
-      }
-
-      // codul e corect — jucatorul chiar detine numarul introdus. Scoatem cererea din lista de
-      // asteptare si continuam exact ca vechiul /api/register (creare/recuperare cont).
-      data.pendingVerifications = data.pendingVerifications.filter((v) => v.requestId !== requestId);
-
-      if (isBlocked(data, pending.phone, pending.name)) {
-        await persist(data);
-        return sendJSON(res, 403, { error: 'Acest număr sau nume a fost blocat de organizatori. Dacă e o greșeală, contactează-i direct.' });
-      }
-
-      let player = findPlayerByPhone(data, pending.phone);
+      let player = findPlayerByPhone(data, phone);
       if (player) {
-        player.name = pending.name; // permite actualizarea numelui daca s-a schimbat
+        player.name = name; // permite actualizarea numelui daca s-a schimbat
       } else {
-        player = { id: crypto.randomUUID(), name: pending.name, phone: pending.phone, createdAt: new Date().toISOString() };
+        player = { id: crypto.randomUUID(), name, phone, createdAt: new Date().toISOString() };
         data.players.push(player);
       }
       await persist(data);
@@ -851,7 +689,7 @@ const server = http.createServer(async (req, res) => {
       // un jucator blocat de organizatori nu mai poate accesa deloc platforma, chiar daca mai are
       // sesiunea salvata in telefon dintr-o vizita anterioara — clientul trateaza acest 403 la fel
       // ca "jucator negasit" (goleste sesiunea locala si arata ecranul de inregistrare), unde, daca
-      // incearca sa se re-inregistreze, va vedea mesajul explicit de blocare (vezi /api/verify/start)
+      // incearca sa se re-inregistreze, va vedea mesajul explicit de blocare (vezi /api/register)
       if (isBlocked(data, player.phone, player.name)) {
         return sendJSON(res, 403, { error: 'Ai fost blocat de organizatori și nu mai poți accesa platforma.' });
       }

@@ -986,22 +986,6 @@
     <p style="margin-top:14px;font-size:12px; color:var(--muted); font-weight:600;">Dacă te-ai mai înregistrat, introdu același număr de telefon și te recunoaștem automat.</p>
   </div>
 
-  <!-- Ecran de verificare telefon prin cod SMS — pasul 2 al inregistrarii (vezi /api/verify/start
-       si /api/verify/check in server.js). Ii dovedeste chiar el ca detine numarul introdus, altfel
-       oricine ar putea scrie un numar inventat si ar trece de blocare (vezi isBlocked). -->
-  <div id="verify-screen" class="card hidden">
-    <h2 style="margin:0 0 4px; font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.03em;">Verificare telefon 📱</h2>
-    <p style="margin:0; color:var(--muted); font-weight:600; font-size:14.5px;">Ți-am trimis un cod prin SMS la <span id="verify-phone-shown"></span>. Introdu-l mai jos.</p>
-    <label for="verify-code">Cod SMS</label>
-    <input type="tel" inputmode="numeric" autocomplete="one-time-code" id="verify-code" placeholder="1234" maxlength="4">
-    <div id="verify-error" class="error-box hidden"></div>
-    <button class="btn-primary" id="verify-submit">Confirmă codul</button>
-    <p style="margin-top:14px;font-size:12px; color:var(--muted); font-weight:600;">
-      Nu ai primit codul? <a href="#" id="verify-resend">Retrimite</a> ·
-      <a href="#" id="verify-back">Schimbă numărul</a>
-    </p>
-  </div>
-
   <!-- Ecran "inscrieri inchise temporar" (Sambata-Duminica) — inlocuieste ecranul de inregistrare
        pentru cei fara sesiune salvata; se afiseaza doar cand serverul confirma ca e inchis
        (vezi API.registrationStatus), nu se ghideaza dupa ceasul telefonului -->
@@ -1164,8 +1148,7 @@
 <script>
 (function(){
   const API = {
-    verifyStart: '/api/verify/start',
-    verifyCheck: '/api/verify/check',
+    register: '/api/register',
     me: '/api/me',
     current: '/api/match/current',
     rsvp: '/api/rsvp',
@@ -1491,12 +1474,6 @@
     setTimeout(() => { burst.innerHTML = ''; }, 950);
   }
 
-  // Inregistrarea are acum doi pasi: 1) nume+telefon -> se trimite un cod prin SMS (verifyStart),
-  // 2) omul introduce codul primit -> contul se creeaza/recupereaza abia atunci (verifyCheck).
-  // Pastram numele/telefonul si request-ul in asteptare aici, ca sa le putem retrimite la nevoie.
-  let pendingVerify = null; // { name, phone, requestId }
-  let resendReadyAt = 0;
-
   el('reg-submit').addEventListener('click', async () => {
     const name = el('reg-name').value.trim();
     const phone = el('reg-phone').value.trim();
@@ -1507,82 +1484,21 @@
       return;
     }
     try {
-      const data = await api(API.verifyStart, {
+      const data = await api(API.register, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({name, phone}),
       });
-      pendingVerify = {name, phone, requestId: data.requestId};
-      resendReadyAt = Date.now() + 30000;
-      el('verify-phone-shown').textContent = phone;
-      el('verify-code').value = '';
-      hide('verify-error');
+      setToken(data.token);
+      currentToken = data.token;
+      myName = data.name;
       hide('register-screen');
-      show('verify-screen');
-      el('verify-code').focus();
+      show('main-screen');
+      await loadMatch();
     } catch (e) {
       el('reg-error').textContent = e.message;
       show('reg-error');
     }
-  });
-
-  el('verify-submit').addEventListener('click', async () => {
-    const code = el('verify-code').value.trim();
-    hide('verify-error');
-    if (!pendingVerify) { show('register-screen'); hide('verify-screen'); return; }
-    if (!code) {
-      el('verify-error').textContent = 'Introdu codul primit prin SMS.';
-      show('verify-error');
-      return;
-    }
-    try {
-      const data = await api(API.verifyCheck, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({requestId: pendingVerify.requestId, code}),
-      });
-      setToken(data.token);
-      currentToken = data.token;
-      myName = data.name;
-      pendingVerify = null;
-      hide('verify-screen');
-      show('main-screen');
-      await loadMatch();
-    } catch (e) {
-      el('verify-error').textContent = e.message;
-      show('verify-error');
-    }
-  });
-
-  el('verify-resend').addEventListener('click', async (ev) => {
-    ev.preventDefault();
-    if (!pendingVerify) return;
-    if (Date.now() < resendReadyAt) return; // evitam spam-ul de click-uri pe "Retrimite"
-    hide('verify-error');
-    try {
-      const data = await api(API.verifyStart, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name: pendingVerify.name, phone: pendingVerify.phone}),
-      });
-      pendingVerify.requestId = data.requestId;
-      resendReadyAt = Date.now() + 30000;
-      el('verify-error').textContent = 'Am retrimis codul prin SMS.';
-      el('verify-error').classList.remove('error-box');
-      show('verify-error');
-    } catch (e) {
-      el('verify-error').textContent = e.message;
-      el('verify-error').classList.add('error-box');
-      show('verify-error');
-    }
-  });
-
-  el('verify-back').addEventListener('click', (ev) => {
-    ev.preventDefault();
-    pendingVerify = null;
-    hide('verify-error');
-    hide('verify-screen');
-    show('register-screen');
   });
 
   el('btn-join').addEventListener('click', openJoinModal);
