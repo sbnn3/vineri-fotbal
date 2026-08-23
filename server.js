@@ -240,14 +240,20 @@ function isRegistrationOpen() {
   return dow === 1 || dow === 2 || dow === 3 || dow === 4 || dow === 5; // Luni, Marti, Miercuri, Joi, Vineri
 }
 
+// Multi jucatori din grup au numere din afara Irlandei (Romania, Moldova, etc.), nu doar
+// irlandeze — normalizarea de mai jos NU respinge/schimba numerele straine, doar aduce
+// numerele irlandeze mereu la aceeasi forma locala (0xxxxxxxx), indiferent cum au fost scrise
+// (0891234567, +353891234567, 00353891234567 sau 353891234567) — asa au fost tratate
+// dintotdeauna in aplicatie (ADMIN_PHONES, blocarea, recunoasterea jucatorilor, etc, toate in
+// acest format). Numerele straine raman in format international "+<cod tara><numar>".
 function normalizePhone(phone) {
   let p = String(phone || '').replace(/[^\d+]/g, '');
   if (!p) return '';
-  // numerele irlandeze pot fi scrise ca 08xxxxxxxx sau +3538xxxxxxxx / 003538xxxxxxxx —
-  // le aducem la aceeasi forma (0xxxxxxxx) ca sa fie recunoscute drept acelasi numar
-  // (ex: 0891234567 si +353891234567 trebuie sa se potriveasca la blocare / recunoastere admin)
+  // prefixul international "00" (des folosit in Europa in loc de "+") il aducem la forma cu
+  // "+", ca sa avem un singur format canonic mai departe pentru numerele straine
+  // (ex: "0040712345678" -> "+40712345678")
+  if (p.startsWith('00')) p = '+' + p.slice(2);
   if (p.startsWith('+353')) p = '0' + p.slice(4);
-  else if (p.startsWith('00353')) p = '0' + p.slice(5);
   else if (/^353\d{7,9}$/.test(p)) p = '0' + p.slice(3);
   return p;
 }
@@ -615,9 +621,10 @@ function isBlocked(data, phone, name) {
 
 // ---------- Verificare telefon prin cod SMS (Vonage Verify v2) ----------
 
-// converteste numarul normalizat (0xxxxxxxx, vezi normalizePhone) in format E.164 (+353xxxxxxxx),
-// asa cum il cere API-ul Vonage
-function toE164Ireland(normalizedPhone) {
+// converteste numarul normalizat (vezi normalizePhone) in format E.164 ("+<cod tara><numar>"),
+// asa cum il cere API-ul Vonage — numerele straine sunt deja in acest format (incep cu "+"),
+// doar cele irlandeze locale (0xxxxxxxx) trebuie completate cu prefixul Irlandei
+function toE164(normalizedPhone) {
   if (normalizedPhone.startsWith('+')) return normalizedPhone;
   if (normalizedPhone.startsWith('0')) return '+353' + normalizedPhone.slice(1);
   return normalizedPhone;
@@ -753,7 +760,10 @@ const server = http.createServer(async (req, res) => {
       if (!name || !phone) return sendJSON(res, 400, { error: 'Numele si telefonul sunt obligatorii.' });
 
       const normPhone = normalizePhone(phone);
-      if (!/^0\d{8,9}$/.test(normPhone)) {
+      // acceptam fie forma locala irlandeza (0xxxxxxxx), fie orice numar international
+      // in format E.164 (+<cod tara><numar>) — multi jucatori au numere de Romania, Moldova etc.
+      const isValidPhone = /^0\d{8,9}$/.test(normPhone) || /^\+\d{8,15}$/.test(normPhone);
+      if (!isValidPhone) {
         return sendJSON(res, 400, { error: 'Numărul de telefon nu pare valid.' });
       }
 
@@ -771,7 +781,7 @@ const server = http.createServer(async (req, res) => {
 
       let requestId;
       try {
-        requestId = await vonageStartVerify(toE164Ireland(normPhone));
+        requestId = await vonageStartVerify(toE164(normPhone));
       } catch (e) {
         console.error('Vonage start verify a esuat:', e.vonageStatus, e.vonageBody || e.message);
         return sendJSON(res, 502, { error: 'Nu am putut trimite codul SMS acum. Mai încearcă în câteva minute.' });
