@@ -686,6 +686,13 @@ const server = http.createServer(async (req, res) => {
       const data = getData();
       const player = data.players.find((p) => p.id === token);
       if (!player) return sendJSON(res, 404, { error: 'Jucator negasit' });
+      // un jucator blocat de organizatori nu mai poate accesa deloc platforma, chiar daca mai are
+      // sesiunea salvata in telefon dintr-o vizita anterioara — clientul trateaza acest 403 la fel
+      // ca "jucator negasit" (goleste sesiunea locala si arata ecranul de inregistrare), unde, daca
+      // incearca sa se re-inregistreze, va vedea mesajul explicit de blocare (vezi /api/register)
+      if (isBlocked(data, player.phone, player.name)) {
+        return sendJSON(res, 403, { error: 'Ai fost blocat de organizatori și nu mai poți accesa platforma.' });
+      }
       return sendJSON(res, 200, { token: player.id, name: player.name });
     }
 
@@ -693,6 +700,15 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/match/current' && req.method === 'GET') {
       const token = parsed.query.token || null;
       const data = getData();
+      // aceeasi verificare ca la /api/me (blocarea taie accesul complet, nu doar inscrierea) — pusa
+      // si aici, separat, ca sa fie acoperit si un apel direct catre acest API, nu doar fluxul normal
+      // din aplicatie (care oricum trece intai prin /api/me inainte sa ajunga aici)
+      if (token) {
+        const requester = data.players.find((p) => p.id === token);
+        if (requester && isBlocked(data, requester.phone, requester.name)) {
+          return sendJSON(res, 403, { error: 'Ai fost blocat de organizatori și nu mai poți accesa platforma.' });
+        }
+      }
       const match = await getOrCreateCurrentMatch(data);
       return sendJSON(res, 200, matchView(data, match, token));
     }
