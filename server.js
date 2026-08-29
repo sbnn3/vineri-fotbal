@@ -59,7 +59,7 @@ const DEFAULT_CONFIG = {
   // confirmati). Pragul se alege dupa capacitatea saptamanii (vezi computePricing).
   priceTiers: [
     { minPlayers: 15, totalCost: 70, hours: 2 },
-    { minPlayers: 12, totalCost: 50, hours: 1.5 },
+    { minPlayers: 12, totalCost: 70, hours: 2 },
     { minPlayers: 10, totalCost: 50, hours: 1.5 },
   ],
 };
@@ -103,13 +103,15 @@ function ensureConfig(data) {
     'Celbridge Golf Range, Celbridge, Co. Kildare',
     "St. Kevin's FC Centre Of Excellence, Dublin 11, D11 TF72",
   ];
-  // Doua variante vechi de praguri de pret: cele din Dublin 11, si prima varianta pusa la
-  // revenirea la Celbridge (doar 2 praguri, 15 si 10 jucatori) — inainte sa adaugam si pragul de
-  // 12 jucatori (tot 50€/1.5h, doar ca se imparte intre mai multi). Ambele trebuie migrate spre
-  // structura finala din DEFAULT_CONFIG mai sus.
+  // Mai multe variante vechi de praguri de pret, pe masura ce structura s-a rafinat: cele din
+  // Dublin 11, prima varianta pusa la revenirea la Celbridge (doar 2 praguri, 15 si 10 jucatori),
+  // apoi varianta cu 3 praguri dar cu pragul de 12 jucatori tot la 50€/1.5h — inainte sa devina
+  // 70€/2h (acelasi cost/durata ca la 15, doar pragul de jucatori mai mic). Toate trebuie migrate
+  // spre structura finala din DEFAULT_CONFIG mai sus.
   const OLD_TIERS_JSON_LIST = [
     JSON.stringify([{ minPlayers: 18, totalCost: 140, hours: 2 }, { minPlayers: 12, totalCost: 105, hours: 1.5 }]),
     JSON.stringify([{ minPlayers: 15, totalCost: 70, hours: 2 }, { minPlayers: 10, totalCost: 50, hours: 1.5 }]),
+    JSON.stringify([{ minPlayers: 15, totalCost: 70, hours: 2 }, { minPlayers: 12, totalCost: 50, hours: 1.5 }, { minPlayers: 10, totalCost: 50, hours: 1.5 }]),
   ];
 
   if (OLD_LOCATIONS.includes(data.config.location)) {
