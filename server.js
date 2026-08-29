@@ -58,7 +58,8 @@ const DEFAULT_CONFIG = {
   // saptamana curenta (altfel ar arata sume ciudate cat timp lista se umple, ex. 17€ la 3
   // confirmati). Pragul se alege dupa capacitatea saptamanii (vezi computePricing).
   priceTiers: [
-    { minPlayers: 15, totalCost: 70, hours: 2 },   // Celbridge Golf Range
+    { minPlayers: 15, totalCost: 70, hours: 2 },
+    { minPlayers: 12, totalCost: 50, hours: 1.5 },
     { minPlayers: 10, totalCost: 50, hours: 1.5 },
   ],
 };
@@ -102,7 +103,14 @@ function ensureConfig(data) {
     'Celbridge Golf Range, Celbridge, Co. Kildare',
     "St. Kevin's FC Centre Of Excellence, Dublin 11, D11 TF72",
   ];
-  const OLD_TIERS_JSON = JSON.stringify([{ minPlayers: 18, totalCost: 140, hours: 2 }, { minPlayers: 12, totalCost: 105, hours: 1.5 }]);
+  // Doua variante vechi de praguri de pret: cele din Dublin 11, si prima varianta pusa la
+  // revenirea la Celbridge (doar 2 praguri, 15 si 10 jucatori) — inainte sa adaugam si pragul de
+  // 12 jucatori (tot 50€/1.5h, doar ca se imparte intre mai multi). Ambele trebuie migrate spre
+  // structura finala din DEFAULT_CONFIG mai sus.
+  const OLD_TIERS_JSON_LIST = [
+    JSON.stringify([{ minPlayers: 18, totalCost: 140, hours: 2 }, { minPlayers: 12, totalCost: 105, hours: 1.5 }]),
+    JSON.stringify([{ minPlayers: 15, totalCost: 70, hours: 2 }, { minPlayers: 10, totalCost: 50, hours: 1.5 }]),
+  ];
 
   if (OLD_LOCATIONS.includes(data.config.location)) {
     data.config.location = DEFAULT_CONFIG.location;
@@ -110,7 +118,7 @@ function ensureConfig(data) {
     data.config.lon = DEFAULT_CONFIG.lon;
   }
   if (data.config.defaultCapacity === 12) data.config.defaultCapacity = DEFAULT_CONFIG.defaultCapacity;
-  if (JSON.stringify(data.config.priceTiers) === OLD_TIERS_JSON) {
+  if (OLD_TIERS_JSON_LIST.includes(JSON.stringify(data.config.priceTiers))) {
     data.config.priceTiers = DEFAULT_CONFIG.priceTiers.map((t) => Object.assign({}, t));
   }
 
@@ -124,7 +132,7 @@ function ensureConfig(data) {
         m.lat = DEFAULT_CONFIG.lat;
         m.lon = DEFAULT_CONFIG.lon;
         if (m.capacity === 12) m.capacity = DEFAULT_CONFIG.defaultCapacity;
-        if (JSON.stringify(m.priceTiers) === OLD_TIERS_JSON) {
+        if (OLD_TIERS_JSON_LIST.includes(JSON.stringify(m.priceTiers))) {
           m.priceTiers = DEFAULT_CONFIG.priceTiers.map((t) => Object.assign({}, t));
         }
       }
