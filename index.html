@@ -650,6 +650,19 @@
     letter-spacing:.02em;
     margin-bottom:12px;
   }
+  .indoor-badge{
+    margin-left:auto;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11px;
+    letter-spacing:.04em;
+    background:rgba(242,169,59,0.16);
+    color:var(--amber);
+    border:1px solid rgba(242,169,59,0.4);
+  }
   .map-frame{
     width:100%;
     height:170px;
@@ -955,7 +968,7 @@
         <circle cx="11.01" cy="37.33" r="3.4"/>
       </g>
     </svg></h1>
-    <p>Celbridge Golf Range · Co. Kildare</p>
+    <p>Clonsilla, Dublin 15</p>
   </header>
 
   <div id="loading" class="spinner">Se încarcă…</div>
@@ -990,7 +1003,7 @@
       <span id="closed-weather" class="hidden">🌡️ —</span>
     </div>
     <div class="location-box">
-      <div class="ltitle">📍 Cum ajungi</div>
+      <div class="ltitle">📍 Cum ajungi<span class="indoor-badge">🏠 Indoor</span></div>
       <iframe class="map-frame" id="closed-map-frame" src="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
       <a href="#" id="closed-btn-maps" class="btn-maps" target="_blank" rel="noopener">Deschide în Google Maps ↗</a>
     </div>
@@ -1046,7 +1059,7 @@
       </div>
 
       <div id="location-box" class="location-box hidden">
-        <div class="ltitle">📍 Cum ajungi</div>
+        <div class="ltitle">📍 Cum ajungi<span class="indoor-badge">🏠 Indoor</span></div>
         <iframe class="map-frame" id="map-frame" src="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         <a href="#" id="btn-maps" class="btn-maps" target="_blank" rel="noopener">Deschide în Google Maps ↗</a>
       </div>
@@ -1070,7 +1083,7 @@
         <a href="#" id="not-me-link">Nu sunt eu</a>
       </div>
     </div>
-    <footer class="credit">Vineri - Seară de Fotbal · Celbridge Golf Range</footer>
+    <footer class="credit">Vineri - Seară de Fotbal · Clonsilla, Dublin 15</footer>
   </div>
 </div>
 

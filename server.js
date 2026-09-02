@@ -47,20 +47,19 @@ const STATIC_FILES = {
 };
 
 const DEFAULT_CONFIG = {
-  location: "Celbridge Golf Range & O'Hanlon Park, Celbridge, Co. Kildare, W23 YX30",
+  location: 'Mountview Fortlawn Community Youth and Sports Hub, Lohunda Downs, Clonsilla, Dublin 15, D15 EY81',
   time: '19:00',
   defaultCapacity: 15,
   revtag: 'sbnn3',
-  lat: 53.33907,
-  lon: -6.50912,
+  lat: 53.38999,
+  lon: -6.40543,
   // Pretul per jucator NU e un camp separat — se calculeaza automat din pragul de pret (cost
   // total / nr. de jucatori al pragului respectiv), NU din cati sunt confirmati acum in
   // saptamana curenta (altfel ar arata sume ciudate cat timp lista se umple, ex. 17€ la 3
   // confirmati). Pragul se alege dupa capacitatea saptamanii (vezi computePricing).
   priceTiers: [
-    { minPlayers: 15, totalCost: 70, hours: 2 },
-    { minPlayers: 12, totalCost: 70, hours: 2 },
-    { minPlayers: 10, totalCost: 50, hours: 1.5 },
+    { minPlayers: 15, totalCost: 90, hours: 2 },
+    { minPlayers: 10, totalCost: 69, hours: 1.5 },
   ],
 };
 
@@ -90,28 +89,28 @@ function ensureConfig(data) {
       .filter((phone) => phone !== PROTECTED_ADMIN_PHONE)
       .map((phone) => ({ phone, addedAt: new Date().toISOString() }));
   }
-  // migrare: locatia terenului (si capacitatea/pretul asociate) s-au schimbat intre timp — intai
-  // locatia, de doua ori ("O'Hanlon Park" -> "Celbridge Golf Range" -> teren nou in Dublin 11),
-  // apoi ne-am mutat inapoi la Celbridge (teren mai mare, deci si capacitatea/pragurile de pret
-  // revin la valorile de dinainte de Dublin 11 — vezi DEFAULT_CONFIG mai sus). Config-ul deja
-  // salvat are mereu prioritate fata de DEFAULT_CONFIG (vezi Object.assign de mai sus), deci orice
-  // valoare veche ramane "inghetata" pana o corectam explicit aici — altfel saptamana viitoare
-  // noul meci auto-creat ar reveni la valorile vechi. Verificam doar valorile vechi cunoscute, ca
-  // sa nu suprascriem vreodata o schimbare facuta manual de admin.
+  // migrare: locatia terenului (si capacitatea/pretul asociate) s-au schimbat de mai multe ori —
+  // "O'Hanlon Park" -> "Celbridge Golf Range" -> teren in Dublin 11 (St. Kevin's) -> inapoi la
+  // Celbridge -> acum sala indoor Mountview Fortlawn, Clonsilla, Dublin 15 (vezi DEFAULT_CONFIG mai
+  // sus). Config-ul deja salvat are mereu prioritate fata de DEFAULT_CONFIG (vezi Object.assign de
+  // mai sus), deci orice valoare veche ramane "inghetata" pana o corectam explicit aici — altfel
+  // saptamana viitoare noul meci auto-creat ar reveni la valorile vechi. Verificam doar valorile
+  // vechi cunoscute, ca sa nu suprascriem vreodata o schimbare facuta manual de admin.
   const OLD_LOCATIONS = [
     "O'Hanlon Park, Celbridge",
     'Celbridge Golf Range, Celbridge, Co. Kildare',
     "St. Kevin's FC Centre Of Excellence, Dublin 11, D11 TF72",
+    "Celbridge Golf Range & O'Hanlon Park, Celbridge, Co. Kildare, W23 YX30",
   ];
-  // Mai multe variante vechi de praguri de pret, pe masura ce structura s-a rafinat: cele din
-  // Dublin 11, prima varianta pusa la revenirea la Celbridge (doar 2 praguri, 15 si 10 jucatori),
-  // apoi varianta cu 3 praguri dar cu pragul de 12 jucatori tot la 50€/1.5h — inainte sa devina
-  // 70€/2h (acelasi cost/durata ca la 15, doar pragul de jucatori mai mic). Toate trebuie migrate
-  // spre structura finala din DEFAULT_CONFIG mai sus.
+  // Mai multe variante vechi de praguri de pret, pe masura ce structura s-a rafinat si s-a mutat:
+  // cele din Dublin 11, doua variante puse la revenirea la Celbridge (2 praguri, apoi 3 praguri cu
+  // pragul de 12 jucatori intai la 50€/1.5h apoi la 70€/2h). Toate trebuie migrate spre structura
+  // finala din DEFAULT_CONFIG mai sus (Mountview: doar 2 praguri, 69€/1.5h si 90€/2h).
   const OLD_TIERS_JSON_LIST = [
     JSON.stringify([{ minPlayers: 18, totalCost: 140, hours: 2 }, { minPlayers: 12, totalCost: 105, hours: 1.5 }]),
     JSON.stringify([{ minPlayers: 15, totalCost: 70, hours: 2 }, { minPlayers: 10, totalCost: 50, hours: 1.5 }]),
     JSON.stringify([{ minPlayers: 15, totalCost: 70, hours: 2 }, { minPlayers: 12, totalCost: 50, hours: 1.5 }, { minPlayers: 10, totalCost: 50, hours: 1.5 }]),
+    JSON.stringify([{ minPlayers: 15, totalCost: 70, hours: 2 }, { minPlayers: 12, totalCost: 70, hours: 2 }, { minPlayers: 10, totalCost: 50, hours: 1.5 }]),
   ];
 
   if (OLD_LOCATIONS.includes(data.config.location)) {

@@ -1,4 +1,4 @@
-# ⚽ Fotbal Vineri — Celbridge Golf Range & O'Hanlon Park, Celbridge
+# ⚽ Fotbal Vineri — Mountview Fortlawn Community Youth and Sports Hub, Clonsilla, Dublin 15 (indoor)
 
 Aplicație simplă pentru gestionarea prezenței la meciurile de fotbal de vineri seara. Jucătorii se înregistrează o singură dată (nume + telefon) și apoi confirmă prezența în fiecare săptămână cu un singur click, direct de pe telefon.
 

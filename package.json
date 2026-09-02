@@ -1,7 +1,7 @@
 {
   "name": "vineri-fotbal",
   "version": "1.0.0",
-  "description": "Aplicatie pentru organizarea meciurilor de fotbal de vineri seara la Celbridge Golf Range & O'Hanlon Park, Celbridge",
+  "description": "Aplicatie pentru organizarea meciurilor de fotbal de vineri seara la Mountview Fortlawn Community Youth and Sports Hub, Clonsilla, Dublin 15 (indoor)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
