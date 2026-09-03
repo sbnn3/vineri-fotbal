@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Vineri - Seară de Fotbal ⚽ — Pauză de iarnă</title>
+<meta name="description" content="Suntem în pauză până la primăvară. Ne vedem atunci — între timp, rămâi pe fir în grupul de WhatsApp.">
+
+<!-- Open Graph — cardul care apare cand linkul e trimis pe WhatsApp / Facebook / etc. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="⚽ Vineri - Seară de Fotbal — Pauză de iarnă">
+<meta property="og:description" content="Suntem în pauză până la primăvară. Ne vedem atunci — între timp, rămâi pe fir în grupul de WhatsApp.">
+<meta property="og:image" content="https://vineri-fotbal.onrender.com/social-card.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://vineri-fotbal.onrender.com/">
+<meta property="og:locale" content="ro_RO">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="⚽ Vineri - Seară de Fotbal — Pauză de iarnă">
+<meta name="twitter:description" content="Suntem în pauză până la primăvară. Ne vedem atunci!">
+<meta name="twitter:image" content="https://vineri-fotbal.onrender.com/social-card.jpg">
+
+<link rel="icon" href="/icon-main.svg" type="image/svg+xml">
+<link rel="icon" href="/icon-main-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/icon-main-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/icon-main-180.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#04150d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vineri ⚽">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-0:#04150d;
+    --pitch-1:#0a2b1a;
+    --pitch-2:#0e3a22;
+    --grass:#22c55e;
+    --grass-2:#16a34a;
+    --grass-glow: rgba(34,197,94,0.45);
+    --gold:#f4c430;
+    --white:#f5f8f6;
+    --muted:#93ab9f;
+    --card:rgba(15,35,24,0.72);
+    --card-border:rgba(255,255,255,0.08);
+    --amber:#f2a93b;
+    --whatsapp:#25d366;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    min-height:100%;
+    background:var(--pitch-0);
+    overscroll-behavior-y:none;
+  }
+  body{
+    font-family:'Rajdhani',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color:var(--white);
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(244,196,48,0.10), transparent 60%),
+      radial-gradient(ellipse 900px 600px at 85% 0%, rgba(34,197,94,0.22), transparent 55%),
+      radial-gradient(ellipse 1200px 800px at 50% 120%, rgba(22,163,74,0.18), transparent 60%),
+      repeating-linear-gradient(115deg, var(--pitch-1) 0px, var(--pitch-1) 90px, var(--pitch-2) 90px, var(--pitch-2) 180px),
+      var(--pitch-0);
+    background-attachment:fixed;
+    min-height:100vh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    display:flex;
+    align-items:center;
+  }
+  .wrap{
+    max-width:480px;
+    margin:0 auto;
+    padding:26px 16px 60px;
+    width:100%;
+  }
+  header.top{
+    text-align:center;
+    padding:10px 0 22px;
+  }
+  .badge-line{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.22em;
+    color:var(--gold);
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .badge-line::before, .badge-line::after{
+    content:"";
+    height:1px;
+    width:22px;
+    background:linear-gradient(90deg, transparent, rgba(244,196,48,0.7));
+  }
+  .badge-line::after{ transform: scaleX(-1); }
+  header.top h1{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:0.22em;
+    font-family:'Bebas Neue',sans-serif;
+    font-weight:400;
+    font-size:clamp(30px, 9vw, 44px);
+    letter-spacing:.04em;
+    margin:0;
+    line-height:1.05;
+  }
+  header.top h1 .title-text{
+    background:linear-gradient(180deg, #ffffff 10%, #cdeedb 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 34px var(--grass-glow);
+  }
+  header.top h1 .ball-icon{
+    width:0.82em;
+    height:0.82em;
+    flex-shrink:0;
+    filter:drop-shadow(0 0 10px var(--grass-glow));
+  }
+  header.top p{
+    margin:6px 0 0;
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:20px;
+    padding:30px 24px;
+    margin-top:18px;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 20px 50px -20px rgba(0,0,0,0.6);
+    position:relative;
+    overflow:hidden;
+    text-align:center;
+    animation: rise .5s ease both;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    padding:1px;
+    border-radius:20px;
+    background:linear-gradient(135deg, rgba(34,197,94,0.5), transparent 40%, transparent 70%, rgba(244,196,48,0.25));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events:none;
+  }
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(14px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .pause-emoji{
+    font-size:44px;
+    line-height:1;
+    margin-bottom:14px;
+  }
+  .card h2{
+    margin:0 0 12px;
+    font-family:'Bebas Neue',sans-serif;
+    font-weight:400;
+    font-size:32px;
+    letter-spacing:.03em;
+    background:linear-gradient(180deg, #ffffff 10%, #cdeedb 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .card p{
+    margin:0 0 10px;
+    color:var(--muted);
+    font-weight:600;
+    font-size:15px;
+    line-height:1.6;
+  }
+  .card p:last-of-type{ margin-bottom:0; }
+  .card p.small-note{
+    font-size:13px;
+    margin-top:16px;
+    padding-top:16px;
+    border-top:1px solid var(--card-border);
+  }
+
+  .btn-whatsapp{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+    margin-top:22px;
+    padding:16px 18px;
+    border-radius:14px;
+    font-family:'Rajdhani',sans-serif;
+    font-size:17px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    text-decoration:none;
+    color:#04150d;
+    background:linear-gradient(135deg, #34e075, var(--whatsapp));
+    box-shadow:0 14px 30px -12px rgba(37,211,102,0.55), inset 0 1px 0 rgba(255,255,255,0.3);
+    transition:transform .12s ease;
+  }
+  .btn-whatsapp:active{ transform:scale(0.97); }
+  .btn-whatsapp svg{ width:22px; height:22px; flex-shrink:0; }
+
+  footer.credit{
+    text-align:center;
+    margin-top:26px;
+    color:#4d6459;
+    font-size:11.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="badge-line">Grup privat</div>
+    <h1><span class="title-text">Vineri - Seară de Fotbal</span><svg class="ball-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#111111" stroke-width="4"/>
+      <polygon points="50,34 65.22,45.06 59.41,62.94 40.59,62.94 34.78,45.06" fill="#111111"/>
+      <g stroke="#111111" stroke-width="3.5" stroke-linecap="round">
+        <line x1="50" y1="34" x2="50" y2="9"/>
+        <line x1="65.22" y1="45.06" x2="88.99" y2="37.33"/>
+        <line x1="59.41" y1="62.94" x2="74.11" y2="83.17"/>
+        <line x1="40.59" y1="62.94" x2="25.89" y2="83.17"/>
+        <line x1="34.78" y1="45.06" x2="11.01" y2="37.33"/>
+      </g>
+      <g fill="#111111">
+        <circle cx="50" cy="9" r="3.4"/>
+        <circle cx="88.99" cy="37.33" r="3.4"/>
+        <circle cx="74.11" cy="83.17" r="3.4"/>
+        <circle cx="25.89" cy="83.17" r="3.4"/>
+        <circle cx="11.01" cy="37.33" r="3.4"/>
+      </g>
+    </svg></h1>
+    <p>Clonsilla, Dublin 15</p>
+  </header>
+
+  <div class="card">
+    <div class="pause-emoji">🌱⚽</div>
+    <h2>Pauză până la primăvară</h2>
+    <p>Sezonul s-a încheiat pentru moment — ne odihnim genunchii și așteptăm vremea bună.</p>
+    <p>Ne reapucăm de fotbal în primăvară, cu tot ce am construit până acum. Pe atunci, ne vedem din nou aici.</p>
+    <p class="small-note">Rămâi pe fir în grupul de WhatsApp — acolo anunțăm exact când revenim.</p>
+    <a class="btn-whatsapp" href="https://chat.whatsapp.com/FXe5T6aM6xf9o2TYwGj4ch?s=cl&amp;p=i&amp;mlu=4&amp;ilr=4" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.652A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.77 9.77 0 0 1-4.98-1.363l-.357-.213-3.72.97.993-3.626-.232-.372A9.75 9.75 0 0 1 2.182 12C2.182 6.582 6.582 2.182 12 2.182S21.818 6.582 21.818 12 17.418 21.818 12 21.818zm5.36-7.335c-.294-.147-1.74-.858-2.01-.956-.27-.098-.467-.147-.663.147-.196.294-.76.955-.932 1.152-.172.196-.343.221-.637.074-.294-.147-1.24-.457-2.362-1.457-.873-.779-1.462-1.741-1.634-2.035-.172-.294-.018-.453.129-.6.133-.132.294-.343.441-.515.147-.172.196-.294.294-.49.098-.196.049-.368-.025-.515-.074-.147-.663-1.6-.909-2.192-.24-.577-.484-.499-.663-.508-.172-.008-.368-.01-.564-.01a1.084 1.084 0 0 0-.784.368c-.27.294-1.03 1.006-1.03 2.454s1.055 2.847 1.202 3.043c.147.196 2.077 3.173 5.034 4.448.703.304 1.252.485 1.68.62.706.225 1.348.193 1.856.117.566-.084 1.74-.711 1.985-1.398.245-.687.245-1.276.172-1.398-.073-.122-.269-.196-.563-.343z"/></svg>
+      Grupul de WhatsApp
+    </a>
+  </div>
+
+  <footer class="credit">Vineri - Seară de Fotbal · Ne vedem la primăvară 🌱</footer>
+</div>
+</body>
+</html>

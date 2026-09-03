@@ -17,6 +17,13 @@ const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const ADMIN_KEY = process.env.ADMIN_KEY || 'schimba-ma-te-rog';
 
+// Pauza de iarna: cand e true, oricine acceseaza link-ul principal ("/") vede o pagina frumoasa
+// de "pauza pana la primavara" (pause.html) cu buton catre grupul de WhatsApp, in loc de aplicatie.
+// Panoul admin ("/admin") ramane accesibil normal, iar toate datele (jucatori, meciuri, prezente)
+// raman neatinse — asta e doar un ecran care se afiseaza in fata. Cand revenim, pune pe false si
+// redeploy (sau cere-i lui Claude sa faca asta, in aceeasi conversatie/proces).
+const SEASON_PAUSED = true;
+
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const UPSTASH_KEY = 'vineri-fotbal-data';
@@ -26,6 +33,7 @@ const upstashEnabled = Boolean(UPSTASH_URL && UPSTASH_TOKEN);
 const STATIC_FILES = {
   '/': 'index.html',
   '/index.html': 'index.html',
+  '/pause.html': 'pause.html',
   '/admin': 'admin.html',
   '/admin.html': 'admin.html',
   '/social-card.jpg': 'social-card.jpg',
@@ -1095,6 +1103,12 @@ const server = http.createServer(async (req, res) => {
         'Content-Disposition': 'attachment; filename="fotbal-vineri.ics"',
       });
       return res.end(ics);
+    }
+
+    // ---- Pauza de iarna: link-ul principal arata pagina de pauza in loc de aplicatie ----
+    // (Panoul admin si toate API-urile raman nealterate — vezi SEASON_PAUSED mai sus)
+    if (req.method === 'GET' && SEASON_PAUSED && (pathname === '/' || pathname === '/index.html')) {
+      return serveStatic(req, res, '/pause.html');
     }
 
     // ---- Fisiere statice (frontend) ----
